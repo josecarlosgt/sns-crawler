@@ -1,0 +1,18 @@
+{
+  "SNS": {
+    "egoId": "josecarlosgt05",
+    "invalidIds": ["fsm2016wsf"],
+    "sampleSize": -1
+  },
+  "BFS": {
+    "topLevel": 1
+  },
+  "MasterLogging": {
+    "enableStdout": true,
+    "logFile": "/var/log/sns-crawler/master"
+  },
+  "SlaveLogging": {
+    "crawlerLogFile": "/var/log/sns-crawler/crawler_",
+    "webServerLogFile": "/var/log/sns-crawler/web_server_"
+  }
+}

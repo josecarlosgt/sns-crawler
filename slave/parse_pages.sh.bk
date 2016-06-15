@@ -1,15 +1,14 @@
 #!/bin/bash
 
-# Global Settings
+### GLOBAL SETTINGS
 
-LOG=$(cat ../configuration.json | grep -oE '\/.+crawler_')$(date +'%d_%m_%Y')
-
-# Constants
-
-CURL_SCRIPT="./ex_curl.sh"
+LOG="/Users/josecarlos/research/output/build_graph/log/log"
+OUTPUT_FOLDER="/Users/josecarlos/research/output/build_graph/raw_conn/"
+CURL_SCRIPT="/Users/josecarlos/research/rep/sns-crawler/slave/ex_curl.sh"
+INFO_FILE="info"
 SLEEP_TIME=0.05
 
-# Parameters
+### PARAMETERS
 
 CONN=""
 CURRENT_SNAME=""
@@ -31,7 +30,7 @@ fi
 
 echo "PARAMETERS: connection type=<$CONN>, screen name=<$CURRENT_SNAME>, extract info=<$EXTRACT_INFO> sample=<$SAMPLE> . Ready to proceed ..." >> $LOG
 
-# Examples of parameters:
+# EXAMPLES:
 
 # CONN="followers"
 # CONN="following"
@@ -39,27 +38,32 @@ echo "PARAMETERS: connection type=<$CONN>, screen name=<$CURRENT_SNAME>, extract
 # CURRENT_SNAME="AucklandUni"
 # CURRENT_SNAME="PedroDuque__"
 
-# Sample counter
+### GLOBAL VARIABLES
+
+echo "" > $LOG
+
+## Output file
+output="$OUTPUT_FOLDER$CONN.$CURRENT_SNAME"
+echo "" > $output
+
+## Sample counter
 samplec=1
 
-# SCREEN NAMES TO RETURN
+## SCREEN NAMES TO RETURN
 snames=""
 
-###################################################################################### Parse initial list
+###################################################################################### PARSE INITIAL LIST
 
 resp0=$($CURL_SCRIPT $CURRENT_SNAME $CONN main)
 sleep $SLEEP_TIME # Allow some sime to avoid hacker-like behaviour
 
-# Extract user info
+### EXTRACT USER INFO
 
 if [ $EXTRACT_INFO -eq "1" ]; then
-	echo "<user_info>$resp0</user_info>"
+	echo $resp0 > "$OUTPUT_FOLDER$INFO_FILE.$CURRENT_SNAME"
 fi
 
-# Connections section
-echo "<$CONN>"
-
-# Extract screen names
+### EXTRACT SCREEN NAMES
 
 snames0=""
 for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9]+"'); do
@@ -69,48 +73,47 @@ for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9]+"'); d
 done
 echo "INITIAL SCREEN NAMES: $snames0" >> $LOG
 
-# Append initial screen names
-echo -e $snames0
+## APPEND INITIAL SCREEN NAMES TO RETURN FILE
+echo -e $snames0 >> $output
 
-# Extract pagination offset (min position to be max position in the next call, if has more connections)
+### EXTRACT PAGINATION OFFSET (MIN POSITION TO BE MAX POSITION IN NEXT CALL, IF HAS MORE CONNECTIONS)
 
 unpar_min_pos0=$(echo $resp0 | grep -oE 'data-min-position="[0-9]+"')
 min_pos0=$(echo $unpar_min_pos0 | grep -oE '[0-9]+')
 echo "INITIAL MIN POSITION: $min_pos0" >> $LOG
 
-# Set pagination
+## SET PAGINATION
 MAX=$min_pos0
 
-################################################################################## Crawl connections
+################################################################################## CRAWL CONNECTIONS
 
 next=1
 echo "SAMPLE COUNT: EXTRACTED $samplec OUT OF $SAMPLE" >> $LOG
 while [ $next -eq 1 ] && ([ $samplec -le $SAMPLE  ] || [ $SAMPLE -lt 0 ]) ; do
 
-samplec=$(($samplec + 1))
-
 resp=$($CURL_SCRIPT $CURRENT_SNAME $CONN xhr $MAX)
 sleep $SLEEP_TIME
 
-# Extract screen names
+### EXTRACT SCREEN NAMES
 
 snames1=""
 for unpar_name in `echo $resp | grep -oE 'screen-name=\\\\"[a-zA-Z0-9]+\\\\"'`; do
 	sname=`echo $unpar_name | grep -oE '\\\\"[a-zA-Z0-9]+\\\\"' | grep -oE '[a-zA-Z0-9]+'`
 	snames1="$snames1\n$sname"
+	samplec=$(($samplec + 1))
 done
 echo "SCREEN NAMES: $snames1" >> $LOG
 
-# Append initial screen names
-echo -e $snames1
+## APPEND INITIAL SCREEN NAMES TO RETURN FILE
+echo -e $snames1 >> $output
 
-# Has more connections?
+### HAS MORE CONNECTIONS?
 
 unpar_has_more=$(echo $resp | grep -oE '"has_more_items":(true|false)')
 has_more=$(echo $unpar_has_more | grep -oE '(true|false)')
 echo "HAS MORE: $has_more" >> $LOG
 
-# Extract pagination offset (min position to be max position in the next call, if has more connections)
+### EXTRACT PAGINATION OFFSET (MIN POSITION TO BE MAX POSITION IN NEXT CALL, IF HAS MORE CONNECTIONS)
 
 unpar_min_pos=$(echo $resp | grep -oE '"min_position":"[0-9]+"')
 min_pos=$(echo $unpar_min_pos | grep -oE '[0-9]+')
@@ -128,8 +131,5 @@ fi
 
 done
 
-echo "</$CONN>"
-
-# rm -f $LOG
 # echo "REST FOR A WHILE UNTIL NEXT CRAWLING ..." >> $LOG
 # sleep $(((${SLEEP_TIME%.*} + 1) * 5))

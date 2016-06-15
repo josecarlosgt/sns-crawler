@@ -1,6 +1,12 @@
 from bs4 import BeautifulSoup
 
 class UserInfo:
+    # Constants
+    CLASS_NAME="UserInfo"
+
+    def __init__(self, soup, logger):
+        self.soup = soup
+        self.logger = logger
 
     def getContent(self, element):
         content = ""
@@ -18,9 +24,6 @@ class UserInfo:
             stat = self.getContent(statCont2)
 
         return stat
-
-    def __init__(self, html):
-        self.soup = BeautifulSoup(html, 'html.parser')
 
     def parse(self):
         # Number of tweets, followers, followees & favourites
@@ -64,13 +67,16 @@ class UserInfo:
         locationCont = self.soup.find("span",  { "class" : "ProfileHeaderCard-locationText" })
         self.location = self.getContent(locationCont)
 
+        self.printAttr()
+
     def printAttr(self):
-        print "# Tweets: %s" % self.tweets
-        print "# Follwing: %s" % self.following
-        print "# Followers: %s" % self.followers
-        print "# Favourites: %s" % self.favourites
-        print "Name: %s" % self.name
-        print "Id: %s" % self.id
-        print "Image: %s" % self.image
-        print "Website: %s" % self.webSite
-        print "Location: %s" % self.location
+        self.logger.info("Parsed information for node: %s" % self.id)
+        self.logger.info("# Tweets: %s" % self.tweets)
+        self.logger.info("# Follwing: %s" % self.following)
+        self.logger.info("# Followers: %s" % self.followers)
+        self.logger.info("# Favourites: %s" % self.favourites)
+        self.logger.info("Name: %s" % self.name)
+        self.logger.info("Id: %s" % self.id)
+        self.logger.info("Image: %s" % self.image)
+        self.logger.info("Website: %s" % self.webSite)
+        self.logger.info("Location: %s" % self.location)
