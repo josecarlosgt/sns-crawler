@@ -62,8 +62,8 @@ echo "<$CONN>"
 # Extract screen names
 
 snames0=""
-for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9]+"'); do
-	sname=`echo $unpar_name | grep -oE '"[a-zA-Z0-9]+"' | grep -oE '[a-zA-Z0-9]+'`
+for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9_]+"'); do
+	sname=`echo $unpar_name | grep -oE '"[a-zA-Z0-9_]+"' | grep -oE '[a-zA-Z0-9_]+'`
 	snames0="$snames0\n$sname"
 	samplec=$(($samplec + 1))
 done
@@ -95,8 +95,8 @@ sleep $SLEEP_TIME
 # Extract screen names
 
 snames1=""
-for unpar_name in `echo $resp | grep -oE 'screen-name=\\\\"[a-zA-Z0-9]+\\\\"'`; do
-	sname=`echo $unpar_name | grep -oE '\\\\"[a-zA-Z0-9]+\\\\"' | grep -oE '[a-zA-Z0-9]+'`
+for unpar_name in `echo $resp | grep -oE 'screen-name=\\\\"[a-zA-Z0-9_]+\\\\"'`; do
+	sname=`echo $unpar_name | grep -oE '\\\\"[a-zA-Z0-9_]+\\\\"' | grep -oE '[a-zA-Z0-9_]+'`
 	snames1="$snames1\n$sname"
 done
 echo "SCREEN NAMES: $snames1" >> $LOG

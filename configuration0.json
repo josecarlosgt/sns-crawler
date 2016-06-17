@@ -1,0 +1,19 @@
+{
+  "SNS": {
+    "egoId": "josecarlosgt05",
+    "invalidIds": ["fsm2016wsf"],
+    "sampleSize": -1,
+    "ipsPool": ["127.0.0.1:3000"]
+  },
+  "BFS": {
+    "topLevel": 2
+  },
+  "MasterLogging": {
+    "enableStdout": true,
+    "logFile": "/var/log/sns-crawler/master"
+  },
+  "SlaveLogging": {
+    "crawlerLogFile": "/var/log/sns-crawler/crawler_",
+    "webServerLogFile": "/var/log/sns-crawler/web_server_"
+  }
+}

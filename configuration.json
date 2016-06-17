@@ -1,11 +1,12 @@
 {
   "SNS": {
-    "egoId": "josecarlosgt05",
-    "invalidIds": ["fsm2016wsf"],
-    "sampleSize": -1
+    "egoId": "josecarlosauck",
+    "invalidIds": ["josecarlosgt05"],
+    "sampleSize": -1,
+    "ipsPool": ["127.0.0.1:3000"]
   },
   "BFS": {
-    "topLevel": 1
+    "topLevel": 2
   },
   "MasterLogging": {
     "enableStdout": true,

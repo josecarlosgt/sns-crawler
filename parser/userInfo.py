@@ -65,18 +65,20 @@ class UserInfo:
 
         # Location
         locationCont = self.soup.find("span",  { "class" : "ProfileHeaderCard-locationText" })
-        self.location = self.getContent(locationCont)
+        if(locationCont is not None):
+            locationCont2 = locationCont.find("a")
+            self.location = self.getContent(locationCont2)
 
         self.printAttr()
 
     def printAttr(self):
         self.logger.info("Parsed information for node: %s" % self.id)
-        self.logger.info("# Tweets: %s" % self.tweets)
-        self.logger.info("# Follwing: %s" % self.following)
-        self.logger.info("# Followers: %s" % self.followers)
-        self.logger.info("# Favourites: %s" % self.favourites)
-        self.logger.info("Name: %s" % self.name)
-        self.logger.info("Id: %s" % self.id)
-        self.logger.info("Image: %s" % self.image)
-        self.logger.info("Website: %s" % self.webSite)
-        self.logger.info("Location: %s" % self.location)
+        self.logger.info("\t# Tweets: %s" % self.tweets)
+        self.logger.info("\t# Follwing: %s" % self.following)
+        self.logger.info("\t# Followers: %s" % self.followers)
+        self.logger.info("\t# Favourites: %s" % self.favourites)
+        self.logger.info("\tName: %s" % self.name)
+        self.logger.info("\tId: %s" % self.id)
+        self.logger.info("\tImage: %s" % self.image)
+        self.logger.info("\tWebsite: %s" % self.webSite)
+        self.logger.info("\tLocation: %s" % self.location)

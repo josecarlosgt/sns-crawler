@@ -1,22 +1,22 @@
 var http = require('http');
 var fs = require('fs');
 var url = require('url');
-const exec = require('child_process').exec;
-const Console = require('console').Console;
+var express = require('express');
+var exec = require('child_process').exec;
+var Console = require('console').Console;
 
 // Global Settings
 
 var config = JSON.parse(fs.readFileSync('../configuration.json', 'utf8'));
 var logFile = config.SlaveLogging.webServerLogFile;
 
+// Logging
+
 var date = new Date();
 logFile = logFile +
   date.getDate() + '_' +
   date.getMonth() + '_' +
   date.getFullYear()
-
-// Logging
-
 const output = fs.createWriteStream(logFile);
 const errorOutput = fs.createWriteStream(logFile);
 const logger = new Console(output, errorOutput);
@@ -24,51 +24,58 @@ const logger = new Console(output, errorOutput);
 // Constants
 
 const port = 3000;
-const IN_EDGES_KEY = "followers";
-const OUT_EDGES_KEY = "following";
 const PARSER = "./parse_pages.sh";
 
-var callback = function(error, stdout, response) {
-  if (error) {
-    logger.error(`exec error: ${error}`);
-  }
-  response.write(stdout);
-}
-
 // Create a server
-http.createServer( function (request, response) {
-   // Parse the request containing file name
-   var urlParts = url.parse(request.url, true);
+var app = express();
+app.get('/*', function (req, res) {
+   logger.log("Request for " + req.originalUrl + " received");
 
-   // Print the name of the file for which request is made.
-   logger.log("Request for " + urlParts.pathname + " received.");
-   user = urlParts.pathname.substr(1);
+   user = req.path.replace('/','');
+   errorMsg = "";
    if(user == "") {
-     logger.log("Empty user in request");
-     response.writeHead(404, {'Content-Type': 'text/html'});
-
-   } else {
-    sampleSize = urlParts.query.sample_size
-    if(sampleSize == undefined) {
-     sampleSize = -1;
-    }
-    logger.log("Processing request for user: <" + user + "> sample size: <" +
-      sampleSize + ">");
-
-    // 1 -> Include user information
-    inEdges = PARSER + " " + IN_EDGES_KEY  + " " + user + " 1 " + sampleSize;
-    outEdges = PARSER + " " + OUT_EDGES_KEY + " " + user + " 0 " + sampleSize;
-    maxBuffer = 1024*1024;
-    response.writeHead(200, {'Content-Type': 'text/html'});
-    exec(inEdges, {maxBuffer: maxBuffer }, (error, stdout, stderr) => {
-        callback(error, stdout, response);
-        exec(outEdges, {maxBuffer: maxBuffer }, (error, stdout, stderr) => {
-            callback(error, stdout, response);
-            response.end();
-        });
-    });
+     errorMsg = "Empty user in request. ";
    }
-}).listen(port);
+   sampleSize = req.query.sample_size
+   if(sampleSize == undefined) {
+     sampleSize = -1;
+   }
+   direction = req.query.direction
+   if(direction == undefined) {
+      errorMsg = errorMsg + "Empty direction in request. ";
+    }
+    userInfo = req.query.user_info
+    if(userInfo == undefined) {
+      errorMsg = errorMsg + "Empty user_info in request. ";
+    }
+    if(errorMsg == "") {
+      logger.log("Processing request for user: <" + user + "> " +
+        "sample size: <" + sampleSize + "> " +
+        "direction: <" + direction + "> " +
+        "userInfo: <" + userInfo + ">");
 
-// logger will print the message
-logger.log('Server running at localhost on port: ' + port);
+      parserCall = PARSER + " " + direction  + " " +
+        user + " " + userInfo + " " + sampleSize;
+      maxBuffer = 1024*1024;
+      logger.log("EXECUTING PARSER: " + parserCall);
+      exec(parserCall, {maxBuffer: maxBuffer }, (error, stdout, stderr) => {
+        if (error) {
+          logger.error("exec error: ${error}");
+          res.status(500).send(error);
+        } else {
+          res.send(stdout);
+        }
+      });
+   } else {
+     logger.log(errorMsg);
+     res.status(500).send(errorMsg);
+   }
+});
+
+var server = app.listen(port, function () {
+  var host = server.address().address
+  var port = server.address().port
+
+  logger.log("Server running at http://%s:%s", host, port)
+});
+server.timeout = 1000 * 3600;
