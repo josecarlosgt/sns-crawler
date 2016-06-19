@@ -30,6 +30,7 @@ class Master:
                 self.logger.info("\t %s: %s" % (option, value))
 
         self.ipsPool = config["SNS"]["ipsPool"]
+        self.THREADS_POOL_SIZE = config["SNS"]["threadsPoolSize"]
 
         self.EGO_ID = config["SNS"]["egoId"]
         self.INVALID_IDS = config["SNS"]["invalidIds"]
@@ -47,25 +48,31 @@ class Master:
         nodes = self.db.retrieveBFSQ(level - 1)
         threads = []
         for node in nodes:
-            ip = self.ipsPool.pop(0)
-            self.ipsPool.append(ip)
-            nodeId = node["_id"]
-            thread = MasterThread(
-                nodeId,
-                level,
-                Logger.clone(
-                    self.logger, MasterThread.CLASS_NAME + "-" + nodeId),
-                self.db,
-                ip,
-                self.INVALID_IDS,
-                self.SAMPLE_SIZE
-            )
-            threads.append(thread)
-            thread.start()
-
-        # Wait until all threads finish to continue with next level
-        for t in threads: t.join()
-        self.logger.info("ALL THREADS FINISHED for level %i" % level)
+            i = 1
+            for count in range(0, self.THREADS_POOL_SIZE):
+                ip = self.ipsPool.pop(0)
+                self.ipsPool.append(ip)
+                nodeId = node["_id"]
+                thread = MasterThread(
+                    nodeId,
+                    level,
+                    Logger.clone(
+                        self.logger, MasterThread.CLASS_NAME + "-" + nodeId),
+                    self.db,
+                    ip,
+                    self.INVALID_IDS,
+                    self.SAMPLE_SIZE
+                )
+                threads.append(thread)
+                thread.start()
+            # Wait until all threads finish to continue with next level
+            self.logger.info("WAITING FOR POOL %i OF THREADS (level %i)" %\
+                (i, level))
+            for t in threads: t.join()
+            self.logger.info("ALL THREADS IN POOL %i FINISHED (level %i)" %\
+                (i, level))
+            i = i + 1
+            threads = []
 
         # Proceed with next level
         if(level < self.TOP_LEVEL):

@@ -1,9 +1,10 @@
 {
   "SNS": {
-    "egoId": "josecarlosauck",
-    "invalidIds": ["josecarlosgt05"],
+    "egoId": "fsm2016wsf",
+    "invalidIds": ["josecarlosgt05","josecarlosauck"],
     "sampleSize": -1,
-    "ipsPool": ["127.0.0.1:3000"]
+    "ipsPool": ["127.0.0.1:3000"],
+    "threadsPoolSize": 100
   },
   "BFS": {
     "topLevel": 2
