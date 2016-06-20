@@ -4,13 +4,15 @@
     "invalidIds": ["josecarlosgt05","josecarlosauck"],
     "sampleSize": -1,
     "ipsPool": ["127.0.0.1:3000"],
-    "threadsPoolSize": 100
+    "threadsPoolSize": 10,
+    "threadsIntervalTime": 0.5
   },
   "BFS": {
-    "topLevel": 2
+    "topLevel": 2,
+    "levelSize": 30
   },
   "MasterLogging": {
-    "enableStdout": true,
+    "enableStdout": false,
     "logFile": "/var/log/sns-crawler/master"
   },
   "SlaveLogging": {

@@ -19,11 +19,14 @@ class MongoDB:
 
     # Breadth first search queue operations
 
-    def retrieveBFSQ(self, level):
+    def retrieveBFSQ(self, level, limit):
         queue = self.db.BFSQ
+        options = {"level": level, "visited": False}
 
-        return queue.find({"level": level, "visited": False},
-            no_cursor_timeout=True)
+        if(limit > 0):
+            return queue.find(options, no_cursor_timeout=True).limit(limit)
+        else:
+            return queue.find(options, no_cursor_timeout=True)
 
     def updateBFSQ(self, id, level):
         queue = self.db.BFSQ
@@ -55,7 +58,7 @@ class MongoDB:
 
         return True
 
-    # Network operations
+# Create indexes
 
     def createEdgesIndex(self):
         self.logger.info(
@@ -64,6 +67,15 @@ class MongoDB:
             ('sourceId', pymongo.ASCENDING),
             ('targetId', pymongo.ASCENDING)],
         unique=True);
+
+    def createNodesIndex(self):
+        self.logger.info(
+            "Creating indexes for nodes collection")
+        self.db['nodes'].create_index([
+            ('twitterID', pymongo.ASCENDING)],
+        unique=True);
+
+    # Network operations
 
     def insertNode(self, info, id):
         nodesCollection = self.db.nodes
@@ -77,7 +89,8 @@ class MongoDB:
             "name": info.name,
             "image": info.image,
             "webSite": info.webSite,
-            "location": info.location
+            "location": info.location,
+            "private": info.private
         }
         try:
             nodesCollection.insert_one(node)

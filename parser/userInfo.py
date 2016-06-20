@@ -65,9 +65,18 @@ class UserInfo:
 
         # Location
         locationCont = self.soup.find("span",  { "class" : "ProfileHeaderCard-locationText" })
+        self.location = ""
         if(locationCont is not None):
             locationCont2 = locationCont.find("a")
             self.location = self.getContent(locationCont2)
+
+        # Protected timeline
+        protectedCont = self.soup.find("div",  { "class" : "ProtectedTimeline" })
+        self.private = False
+        if(protectedCont is not None):
+            protectedCont2 = protectedCont.find("h2",  { "class" : "ProtectedTimeline-heading" })
+            if(protectedCont2 is not None):
+                self.private = True
 
         self.printAttr()
 
@@ -82,3 +91,4 @@ class UserInfo:
         self.logger.info("\tImage: %s" % self.image)
         self.logger.info("\tWebsite: %s" % self.webSite)
         self.logger.info("\tLocation: %s" % self.location)
+        self.logger.info("\Private: %s" % self.private)

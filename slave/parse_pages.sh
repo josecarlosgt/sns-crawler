@@ -7,7 +7,7 @@ LOG=$(cat ../configuration.json | grep -oE '\/.+crawler_')$(date +'%d_%m_%Y')
 # Constants
 
 CURL_SCRIPT="./ex_curl.sh"
-SLEEP_TIME=0.05
+SLEEP_TIME=0.1
 
 # Parameters
 
@@ -30,7 +30,7 @@ else
 fi
 
 echo "PARAMETERS: connection type=<$CONN>, screen name=<$CURRENT_SNAME>, extract info=<$EXTRACT_INFO> sample=<$SAMPLE> . Ready to proceed ..." >> $LOG
-
+ID="$CURRENT_SNAME-$CONN"
 # Examples of parameters:
 
 # CONN="followers"
@@ -67,7 +67,7 @@ for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9_]+"'); 
 	snames0="$snames0\n$sname"
 	samplec=$(($samplec + 1))
 done
-echo "INITIAL SCREEN NAMES: $snames0" >> $LOG
+echo "($ID) INITIAL SCREEN NAMES: $snames0" >> $LOG
 
 # Append initial screen names
 echo -e $snames0
@@ -76,7 +76,7 @@ echo -e $snames0
 
 unpar_min_pos0=$(echo $resp0 | grep -oE 'data-min-position="[0-9]+"')
 min_pos0=$(echo $unpar_min_pos0 | grep -oE '[0-9]+')
-echo "INITIAL MIN POSITION: $min_pos0" >> $LOG
+echo "($ID) INITIAL MIN POSITION: $min_pos0" >> $LOG
 
 # Set pagination
 MAX=$min_pos0
@@ -84,9 +84,14 @@ MAX=$min_pos0
 ################################################################################## Crawl connections
 
 next=1
-echo "SAMPLE COUNT: EXTRACTED $samplec OUT OF $SAMPLE" >> $LOG
-while [ $next -eq 1 ] && ([ $samplec -le $SAMPLE  ] || [ $SAMPLE -lt 0 ]) ; do
+if [ -n "$MAX" ]; then
+	echo "($ID) INITIAL COUNT: $samplec OUT OF $SAMPLE. EXECUTING CRAWLER." >> $LOG
+else
+	echo "($ID) INITIAL COUNT: $samplec OUT OF $SAMPLE. NO MORE CONNECTIONS." >> $LOG
+	next=0
+fi
 
+while [ $next -eq 1 ] && ([ $samplec -le $SAMPLE  ] || [ $SAMPLE -lt 0 ]) ; do
 samplec=$(($samplec + 1))
 
 resp=$($CURL_SCRIPT $CURRENT_SNAME $CONN xhr $MAX)
@@ -99,7 +104,7 @@ for unpar_name in `echo $resp | grep -oE 'screen-name=\\\\"[a-zA-Z0-9_]+\\\\"'`;
 	sname=`echo $unpar_name | grep -oE '\\\\"[a-zA-Z0-9_]+\\\\"' | grep -oE '[a-zA-Z0-9_]+'`
 	snames1="$snames1\n$sname"
 done
-echo "SCREEN NAMES: $snames1" >> $LOG
+echo "($ID) SCREEN NAMES: $snames1" >> $LOG
 
 # Append initial screen names
 echo -e $snames1
@@ -108,13 +113,13 @@ echo -e $snames1
 
 unpar_has_more=$(echo $resp | grep -oE '"has_more_items":(true|false)')
 has_more=$(echo $unpar_has_more | grep -oE '(true|false)')
-echo "HAS MORE: $has_more" >> $LOG
+echo "($ID) HAS MORE: $has_more" >> $LOG
 
 # Extract pagination offset (min position to be max position in the next call, if has more connections)
 
 unpar_min_pos=$(echo $resp | grep -oE '"min_position":"[0-9]+"')
 min_pos=$(echo $unpar_min_pos | grep -oE '[0-9]+')
-echo "MIN POSITION: $min_pos" >> $LOG
+echo "($ID) MIN POSITION: $min_pos" >> $LOG
 
 if [ -n "$has_more" ] ; then
 	if [ $has_more = "true" ]; then

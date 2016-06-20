@@ -1,5 +1,6 @@
 import logging
 import datetime
+import time
 from pymongo.errors import ServerSelectionTimeoutError
 
 from database.mongoDB import MongoDB
@@ -35,7 +36,10 @@ class Master:
         self.EGO_ID = config["SNS"]["egoId"]
         self.INVALID_IDS = config["SNS"]["invalidIds"]
         self.SAMPLE_SIZE = config["SNS"]["sampleSize"]
+        self.THREADS_INTERVAL_TIME = config["SNS"]["threadsIntervalTime"]
+
         self.TOP_LEVEL = config["BFS"]["topLevel"]
+        self.BFSQ_LEVEL_SIZE = config["BFS"]["levelSize"]
 
         self.db = MongoDB(timeId,
             Logger.clone(self.logger, MongoDB.CLASS_NAME))
@@ -44,35 +48,47 @@ class Master:
         self.logger.info("CREATING THREADS for level %i" %\
             level)
 
-        # Retrieve nodes from level
-        nodes = self.db.retrieveBFSQ(level - 1)
+        # Retrieve nodes from current level
+        nodes = self.db.retrieveBFSQ(level - 1, self.BFSQ_LEVEL_SIZE)
         threads = []
-        for node in nodes:
+        hasMoreNodes = True
+        while(hasMoreNodes):
             i = 1
             for count in range(0, self.THREADS_POOL_SIZE):
-                ip = self.ipsPool.pop(0)
-                self.ipsPool.append(ip)
-                nodeId = node["_id"]
-                thread = MasterThread(
-                    nodeId,
-                    level,
-                    Logger.clone(
-                        self.logger, MasterThread.CLASS_NAME + "-" + nodeId),
-                    self.db,
-                    ip,
-                    self.INVALID_IDS,
-                    self.SAMPLE_SIZE
-                )
-                threads.append(thread)
-                thread.start()
+                try:
+                    node = nodes.next()
+                    ip = self.ipsPool.pop(0)
+                    self.ipsPool.append(ip)
+                    nodeId = node["_id"]
+                    thread = MasterThread(
+                        nodeId,
+                        level,
+                        Logger.clone(
+                            self.logger, MasterThread.CLASS_NAME + "-" + nodeId),
+                        self.db,
+                        ip,
+                        self.INVALID_IDS,
+                        self.SAMPLE_SIZE
+                    )
+                    threads.append(thread)
+                    thread.start()
+                    time.sleep(self.THREADS_INTERVAL_TIME)
+                except StopIteration:
+                    hasMoreNodes = False
+                    self.logger.info("ALL NODES IN BFSQ RETRIEVED (level %i)" %\
+                        (level))
+                    break
+
             # Wait until all threads finish to continue with next level
-            self.logger.info("WAITING FOR POOL %i OF THREADS (level %i)" %\
-                (i, level))
+            self.logger.info("WAITING FOR %ith POOL OF %i THREADS (level %i)" %\
+                (i, len(threads), level))
             for t in threads: t.join()
-            self.logger.info("ALL THREADS IN POOL %i FINISHED (level %i)" %\
-                (i, level))
+            self.logger.info("ALL %ith POOL OF %i THREADS FINISHED (level %i)" %\
+                (i, len(threads), level))
             i = i + 1
             threads = []
+
+        self.logger.info("LEVEL %i COMPLETED" % level)
 
         # Proceed with next level
         if(level < self.TOP_LEVEL):
@@ -84,6 +100,7 @@ class Master:
 
         try:
             self.db.createEdgesIndex()
+            self.db.createNodesIndex()
 
             # Disable this when resuming a failed operation
             self.db.clearBFSQ()
