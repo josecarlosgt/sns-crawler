@@ -2,7 +2,7 @@
 
 # Global Settings
 
-LOG=$(cat ../configuration.json.base | grep -oE '\/.+crawler')
+LOG=$(cat ../configuration.json.base | grep -oE '\/.+bash_crawler')
 
 # Constants
 

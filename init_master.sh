@@ -3,4 +3,4 @@
 # Initialize slave
 
 cd ~/research/sns-crawler
-nohup python crawler.py &
+nohup python ./crawler.py &

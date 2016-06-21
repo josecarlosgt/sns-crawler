@@ -3,4 +3,4 @@
 # Initialize slave
 
 cd ~/research/sns-crawler/slave
-nohup node server.js &
+nohup node ./server.js &

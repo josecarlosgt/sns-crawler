@@ -18,7 +18,7 @@
     "logFile": "/var/log/sns-crawler/master"
   },
   "SlaveLogging": {
-    "crawlerLogFile": "/var/log/sns-crawler/crawler",
+    "crawlerLogFile": "/var/log/sns-crawler/bash_crawler",
     "webServerLogFile": "/var/log/sns-crawler/web_server"
   }
 }
