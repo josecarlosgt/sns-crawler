@@ -2,8 +2,7 @@
   "SNS": {
     "egoId": "fsm2016wsf",
     "invalidIds": ["josecarlosgt05","josecarlosauck"],
-    "sampleSize": -1,
-    "ipsPool": ["127.0.0.1:3000"],
+    "sampleSize": -1
   },
   "BFS": {
     "topLevel": 2,
@@ -11,7 +10,8 @@
   },
   "Multithreading": {
     "threadsPoolSize": 100,
-    "threadsIntervalTime": 5
+    "threadsIntervalTime": 5,
+    "ipsPool": ["127.0.0.1:3000"]
   },
   "MasterLogging": {
     "enableStdout": false,

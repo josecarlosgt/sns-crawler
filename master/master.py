@@ -30,13 +30,13 @@ class Master:
             for option, value in sValue.iteritems():
                 self.logger.info("\t %s: %s" % (option, value))
 
-        self.ipsPool = config["SNS"]["ipsPool"]
-        self.THREADS_POOL_SIZE = config["SNS"]["threadsPoolSize"]
+        self.ipsPool = config["Multithreading"]["ipsPool"]
+        self.THREADS_POOL_SIZE = config["Multithreading"]["threadsPoolSize"]
+        self.THREADS_INTERVAL_TIME = config["Multithreading"]["threadsIntervalTime"]
 
         self.EGO_ID = config["SNS"]["egoId"]
         self.INVALID_IDS = config["SNS"]["invalidIds"]
         self.SAMPLE_SIZE = config["SNS"]["sampleSize"]
-        self.THREADS_INTERVAL_TIME = config["SNS"]["threadsIntervalTime"]
 
         self.TOP_LEVEL = config["BFS"]["topLevel"]
         self.BFSQ_LEVEL_SIZE = config["BFS"]["levelSize"]
