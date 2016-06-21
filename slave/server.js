@@ -12,11 +12,6 @@ var logFile = config.SlaveLogging.webServerLogFile;
 
 // Logging
 
-var date = new Date();
-logFile = logFile +
-  date.getDate() + '_' +
-  date.getMonth() + '_' +
-  date.getFullYear()
 const output = fs.createWriteStream(logFile);
 const errorOutput = fs.createWriteStream(logFile);
 const logger = new Console(output, errorOutput);
