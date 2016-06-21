@@ -1,0 +1,26 @@
+*** DEBIAN VERSION
+
+cat /proc/version
+Linux version 3.2.0-4-amd64 (debian-kernel@lists.debian.org) (gcc version 4.6.3 (Debian 4.6.3-14) ) #1 SMP Debian 3.2.63-2+deb7u1
+
+*** SYSTEM REQUIREMENTS
+
+sudo apt-get install python2.7
+sudo apt-get install mongodb
+
+curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+sudo apt-get install build-essential python-dev
+sudo apt-get install python-pip
+sudo pip install --upgrade pymongo
+sudo pip install beautifulsoup4
+
+
+*** START FRESH CRAWLING
+
+use research_db
+db.nodes.drop(); db.BFSQ.drop(); db.edges20_06_2016.drop()
+
+nohup node server.js &
+nohup python crawler.py &

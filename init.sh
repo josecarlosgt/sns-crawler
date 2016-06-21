@@ -9,4 +9,3 @@ sudo mkdir -p /var/log/sns-crawler/
 
 # Create nodes index
 mongo ./master/mongodb/create_db.js
-

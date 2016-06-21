@@ -1,5 +1,7 @@
-conn = new Mongo();
-db = conn.getDB("research_db");
+// This file is just for reference, it is not needed to be executed anymore
+
+//conn = new Mongo();
+//db = conn.getDB("research_db");
 
 // Unique Indexes
 // Collections for edges are each time the crawler runs, so that each crawling

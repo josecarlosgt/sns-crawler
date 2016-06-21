@@ -1,15 +1,20 @@
 {
   "SNS": {
-    "egoId": "josecarlosgt05",
-    "invalidIds": ["fsm2016wsf"],
+    "egoId": "fsm2016wsf",
+    "invalidIds": ["josecarlosgt05","josecarlosauck"],
     "sampleSize": -1,
-    "ipsPool": ["127.0.0.1:3000"]
+    "ipsPool": ["127.0.0.1:3000"],
   },
   "BFS": {
-    "topLevel": 2
+    "topLevel": 2,
+    "levelSize": -1
+  },
+  "Multithreading": {
+    "threadsPoolSize": 100,
+    "threadsIntervalTime": 5
   },
   "MasterLogging": {
-    "enableStdout": true,
+    "enableStdout": false,
     "logFile": "/var/log/sns-crawler/master"
   },
   "SlaveLogging": {
