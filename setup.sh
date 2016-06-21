@@ -10,3 +10,5 @@
 
 # Create log directory
 sudo mkdir -p /var/log/sns-crawler/
+me=`whoami`
+sudo chown $me /var/log/sns-crawler/
