@@ -9,17 +9,19 @@ sudo apt-get update
 
 *** SYSTEM REQUIREMENTS
 
+** Master
 sudo apt-get install python2.7
 sudo apt-get install mongodb
-
-curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-sudo apt-get install -y nodejs
 
 sudo apt-get install build-essential python-dev
 sudo apt-get install python-pip
 sudo pip install --upgrade pymongo
 sudo pip install beautifulsoup4
 
+** Slave
+sudo apt-get install curl
+curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
 *** START FRESH CRAWLING
 

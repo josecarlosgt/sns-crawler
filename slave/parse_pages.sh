@@ -2,7 +2,7 @@
 
 # Global Settings
 
-LOG=$(cat ../configuration.json | grep -oE '\/.+crawler_')$(date +'%d_%m_%Y')
+LOG=$(cat ../configuration.json.base | grep -oE '\/.+crawler')
 
 # Constants
 

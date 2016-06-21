@@ -7,7 +7,7 @@ var Console = require('console').Console;
 
 // Global Settings
 
-var config = JSON.parse(fs.readFileSync('../configuration.json', 'utf8'));
+var config = JSON.parse(fs.readFileSync('../configuration.json.base', 'utf8'));
 var logFile = config.SlaveLogging.webServerLogFile;
 
 // Logging
