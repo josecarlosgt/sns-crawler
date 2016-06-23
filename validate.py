@@ -1,8 +1,11 @@
-import datetime
+import sys
 
 from validator.checkDegrees import CheckDegrees
 
-today = datetime.date.today()
-timeId = today.strftime('%d_%m_%Y')
-checkDegrees = CheckDegrees(timeId)
-checkDegrees.run()
+if(len(sys.argv) > 1):
+    print 'Argument List: ', str(sys.argv)
+    timeId = sys.argv[1]
+    checkDegrees = CheckDegrees(timeId)
+    checkDegrees.run()
+else:
+    print "Invalid argument list"
