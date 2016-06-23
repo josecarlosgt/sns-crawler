@@ -4,8 +4,9 @@ class UserInfo:
     # Constants
     CLASS_NAME="UserInfo"
 
-    def __init__(self, soup, logger):
+    def __init__(self, soup, ip, logger):
         self.soup = soup
+        self.ip = ip
         self.logger = logger
 
     def getContent(self, element):

@@ -102,7 +102,8 @@ class MongoDB:
             "following": info.following,
             "followers": info.followers,
             "favourites": info.favourites,
-            "private": info.private
+            "private": info.private,
+            "collectorIP": info.ip
         }
         try:
             nodesCollection.insert_one(node)

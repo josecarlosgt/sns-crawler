@@ -31,6 +31,7 @@ class MasterThread (threading.Thread):
 
     def processNode(self, info, nodeId):
         u = UserInfo(info,
+            self.ip,
             Logger.clone(self.logger, UserInfo.CLASS_NAME))
         u.parse()
         self.db.insertNode(u, nodeId)
@@ -104,5 +105,5 @@ class MasterThread (threading.Thread):
     def run(self):
         self.logger.info("Processing node: %s[L%s] - IP: %s" %\
             (self.nodeId, self.level, self.ip))
-        self.collectEdges(self.level, self.nodeId, self.IN_EDGES_KEY, 1)
-        self.collectEdges(self.level, self.nodeId, self.OUT_EDGES_KEY, 0)
+        self.collectEdges(self.level, self.nodeId, self.OUT_EDGES_KEY, 1)
+        self.collectEdges(self.level, self.nodeId, self.IN_EDGES_KEY, 0)
