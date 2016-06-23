@@ -9,9 +9,10 @@ class CheckDegrees:
         client = MongoClient()
         self.db = client[MongoDB.DATABASE_NAME]
         self.EDGES_COLLECTION = 'edges' + TIME_ID
+        self.NODES_COLLECTION = 'nodes' + TIME_ID
 
     def run(self):
-        nodes = self.db.nodes.find({})
+        nodes = self.db[self.NODES_COLLECTION].find({})
         for node in nodes:
             inEdgesP = node["following"]
             outEdgesP = node["followers"]
