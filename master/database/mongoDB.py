@@ -75,29 +75,46 @@ class MongoDB:
             ('twitterID', pymongo.ASCENDING)],
         unique=True);
 
+    def createNodesValidatorIndex(self):
+        self.logger.info(
+            "Creating indexes for collection: %s" % 'nodes' + self.timeId)
+        self.db['nodes' + self.timeId].create_index([
+            ('twitterID', pymongo.ASCENDING)],
+        unique=True);
+
     # Network operations
 
     def insertNode(self, info, id):
         nodesCollection = self.db.nodes
+        nodesValidatorCollection = self.db['nodes' + self.timeId]
         node = {
+            "twitterID": id,
+            "initialTimeId": self.timeId,
+            "name": info.name,
+            "image": info.image,
+            "webSite": info.webSite,
+            "location": info.location
+        }
+        nodeValidator = {
             "twitterID": id,
             "timeId": self.timeId,
             "tweets": info.tweets,
             "following": info.following,
             "followers": info.followers,
             "favourites": info.favourites,
-            "name": info.name,
-            "image": info.image,
-            "webSite": info.webSite,
-            "location": info.location,
             "private": info.private
         }
         try:
             nodesCollection.insert_one(node)
             self.logger.info("Adding node to network: %s" % id)
-
         except DuplicateKeyError:
-            return False
+            pass
+
+        try:
+            nodesValidatorCollection.insert_one(nodeValidator)
+            self.logger.info("Adding node validator to network: %s" % id)
+        except DuplicateKeyError:
+            pass
 
         return True
 

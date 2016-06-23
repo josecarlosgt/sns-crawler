@@ -101,6 +101,7 @@ class Master:
         try:
             self.db.createEdgesIndex()
             self.db.createNodesIndex()
+            self.db.createNodesValidatorIndex()
 
             # Disable this when resuming a failed operation
             self.db.clearBFSQ()
