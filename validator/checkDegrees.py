@@ -33,9 +33,9 @@ class CheckDegrees:
 
             if( ((outEdgesPI != outEdgesC) or
                 (inEdgesPI != inEdgesC)) and not node["private"] ):
-                print ("ALERT (parsed/crawled) for %s "
+                print ("ALERT (parsed/crawled) for %s %s "
                     "Indegree (followers): %s/%s "
                     "Outdegree (following): %s/%s") %\
-                    (node["twitterID"],\
+                    (node["twitterID"], node["collectorIP"], \
                         outEdgesP, outEdgesC,\
                         inEdgesP, inEdgesC)
