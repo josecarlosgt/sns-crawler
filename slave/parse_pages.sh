@@ -31,6 +31,8 @@ fi
 
 echo "PARAMETERS: connection type=<$CONN>, screen name=<$CURRENT_SNAME>, extract info=<$EXTRACT_INFO> sample=<$SAMPLE> . Ready to proceed ..." >> $LOG
 ID="$CURRENT_SNAME-$CONN"
+LOG2_0="$LOG-user-0-$CURRENT_SNAME"
+LOG2_1="$LOG-user-1-$CURRENT_SNAME"
 # Examples of parameters:
 
 # CONN="followers"
@@ -39,8 +41,8 @@ ID="$CURRENT_SNAME-$CONN"
 # CURRENT_SNAME="AucklandUni"
 # CURRENT_SNAME="PedroDuque__"
 
-# Sample counter
-samplec=1
+# Crawlings counter
+samplec=0
 
 # SCREEN NAMES TO RETURN
 snames=""
@@ -48,6 +50,8 @@ snames=""
 ###################################################################################### Parse initial list
 
 resp0=$($CURL_SCRIPT $CURRENT_SNAME $CONN main)
+echo "**$resp0**" > $LOG2_0 # Logging response
+samplec=$(($samplec + 1))
 sleep $SLEEP_TIME # Allow some sime to avoid hacker-like behaviour
 
 # Extract user info
@@ -65,7 +69,6 @@ snames0=""
 for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9_]+"'); do
 	sname=`echo $unpar_name | grep -oE '"[a-zA-Z0-9_]+"' | grep -oE '[a-zA-Z0-9_]+'`
 	snames0="$snames0\n$sname"
-	samplec=$(($samplec + 1))
 done
 echo "($ID) INITIAL SCREEN NAMES: $snames0" >> $LOG
 
@@ -92,9 +95,10 @@ else
 fi
 
 while [ $next -eq 1 ] && ([ $samplec -le $SAMPLE  ] || [ $SAMPLE -lt 0 ]) ; do
-samplec=$(($samplec + 1))
 
 resp=$($CURL_SCRIPT $CURRENT_SNAME $CONN xhr $MAX)
+echo "**$resp**" > $LOG2_1 # Logging response
+samplec=$(($samplec + 1))
 sleep $SLEEP_TIME
 
 # Extract screen names
