@@ -36,6 +36,9 @@ class DegreeStats:
         print "Variance indegree: %s" % round(numpy.var(inDegrees), 2)
         print "Variance outdegree: %s" % round(numpy.var(outDegress), 2)
 
-        for q in [60,80,90]:
+        print "Max indegree: %s" % numpy.amax(inDegrees)
+        print "Max outdegree: %s" % numpy.amax(outDegress)
+
+        for q in [60,80,90, 99]:
             self.percentileStat("indegree", inDegrees, q)
             self.percentileStat("outdegree", outDegress, q)
