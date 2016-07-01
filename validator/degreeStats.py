@@ -27,8 +27,8 @@ class DegreeStats:
                 pass
 
         print "DEGREES DESCRIPTIVE STATISTICS\n"
-        print "Mean indegree: {:,}".format(round(numpy.mean(inDegrees, 2))
-        print "Mean outdegree: {:,}".format(round(numpy.mean(outDegrees, 2))
+        print "Mean indegree: {:,}".format(round(numpy.mean(inDegrees), 2))
+        print "Mean outdegree: {:,}".format(round(numpy.mean(outDegrees), 2))
         print ""
         print "Standard Variation indegree: {:,}".format(round(numpy.std(inDegrees), 2))
         print "Standard Variation outdegree: {:,}".format(round(numpy.std(outDegrees), 2))
