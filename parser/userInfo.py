@@ -26,15 +26,35 @@ class UserInfo:
 
         return stat
 
+    @staticmethod
+    def getNumber(text):
+        text = text.replace(',', '').lower()
+        value = 0
+        if "k" in text:
+            value = float(text.replace('k', '')) * 1000
+        elif "m" in text:
+            value =  float(text.replace('m', '')) * 1000000
+        else:
+            try:
+                value = float(text)
+            except ValueError:
+                pass
+
+        return int(value)
+
     def parse(self):
         # Number of tweets, followers, followees & favourites
-        self.tweets = self.getStat("ProfileNav-item--tweets")
+        tweets = self.getStat("ProfileNav-item--tweets")
+        self.tweets = self.getNumber(tweets)
 
-        self.following = self.getStat("ProfileNav-item--following")
+        following = self.getStat("ProfileNav-item--following")
+        self.following = self.getNumber(following)
 
-        self.followers = self.getStat("ProfileNav-item--followers")
+        followers = self.getStat("ProfileNav-item--followers")
+        self.followers = self.getNumber(followers)
 
-        self.favourites = self.getStat("ProfileNav-item--favorites")
+        favourites = self.getStat("ProfileNav-item--favorites")
+        self.favourites = self.getNumber(favourites)
 
         # user name & id
         nameCont = self.soup.find("a",  { "class" : "ProfileHeaderCard-nameLink" })

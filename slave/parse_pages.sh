@@ -7,7 +7,7 @@ LOG=$(cat ../configuration.json.base | grep -oE '\/.+bash_crawler')
 # Constants
 
 CURL_SCRIPT="./ex_curl.sh"
-SLEEP_TIME=0.1
+SLEEP_TIME=0.05
 
 # Parameters
 
@@ -31,8 +31,8 @@ fi
 
 echo "PARAMETERS: connection type=<$CONN>, screen name=<$CURRENT_SNAME>, extract info=<$EXTRACT_INFO> sample=<$SAMPLE> . Ready to proceed ..." >> $LOG
 ID="$CURRENT_SNAME-$CONN"
-LOG2_0="$LOG-user-0-$CURRENT_SNAME"
-LOG2_1="$LOG-user-1-$CURRENT_SNAME"
+LOG2_0="$LOG-user-0-$CURRENT_SNAME-$CONN"
+LOG2_1="$LOG-user-1-$CURRENT_SNAME-$CONN"
 # Examples of parameters:
 
 # CONN="followers"
@@ -97,6 +97,9 @@ fi
 while [ $next -eq 1 ] && ([ $samplec -le $SAMPLE  ] || [ $SAMPLE -lt 0 ]) ; do
 
 resp=$($CURL_SCRIPT $CURRENT_SNAME $CONN xhr $MAX)
+
+
+
 echo "**$resp**" > $LOG2_1 # Logging response
 samplec=$(($samplec + 1))
 sleep $SLEEP_TIME
