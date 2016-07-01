@@ -27,8 +27,8 @@ class DegreeStats:
                 pass
 
         print "DEGREES DESCRIPTIVE STATISTICS\n"
-        print "Mean indegree: {:,}".format(numpy.mean(inDegrees))
-        print "Mean outdegree: {:,}".format(numpy.mean(outDegrees))
+        print "Mean indegree: {:,}".format(round(numpy.mean(inDegrees, 2))
+        print "Mean outdegree: {:,}".format(round(numpy.mean(outDegrees, 2))
         print ""
         print "Standard Variation indegree: {:,}".format(round(numpy.std(inDegrees), 2))
         print "Standard Variation outdegree: {:,}".format(round(numpy.std(outDegrees), 2))
@@ -40,7 +40,7 @@ class DegreeStats:
         print "Max outdegree: {:,}".format(numpy.amax(outDegrees))
         print ""
 
-        for q in [60, 80, 90, 95, 99]:
+        for q in [60, 80, 90, 95, 96, 97, 98, 99]:
             self.percentileStat("indegree", inDegrees, q)
             self.percentileStat("outdegree", outDegrees, q)
             print ""
