@@ -14,8 +14,8 @@ class CheckDegrees:
     def run(self):
         nodes = self.db[self.NODES_COLLECTION].find({})
         for node in nodes:
-            inEdgesP = node["following"]
-            outEdgesP = node["followers"]
+            inEdgesP = node["followers"]
+            outEdgesP = node["following"]
             outEdgesPI = 0
             inEdgesPI = 0
             try:
@@ -24,10 +24,10 @@ class CheckDegrees:
             except ValueError:
                 print "PARSE ERROR"
 
-            outEdgesC = self.db[self.EDGES_COLLECTION].find(
+            inEdgesC = self.db[self.EDGES_COLLECTION].find(
                 {"targetId": node["twitterID"]}
             ).count()
-            inEdgesC = self.db[self.EDGES_COLLECTION].find(
+            outEdgesC = self.db[self.EDGES_COLLECTION].find(
                 {"sourceId": node["twitterID"]}
             ).count()
 
@@ -37,5 +37,5 @@ class CheckDegrees:
                     "Indegree (followers): %s/%s "
                     "Outdegree (following): %s/%s") %\
                     (node["twitterID"], node["collectorIP"], \
-                        outEdgesP, outEdgesC,\
-                        inEdgesP, inEdgesC)
+                        inEdgesP, inEdgesC,\
+                        outEdgesP, outEdgesC)

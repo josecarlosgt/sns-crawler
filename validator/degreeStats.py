@@ -13,32 +13,34 @@ class DegreeStats:
         self.NODES_COLLECTION = 'nodes' + TIME_ID
 
     def percentileStat(self, degree, data, q):
-        print "%sth percentile for %s: %s" % (q, degree, round(numpy.percentile(data, q)))
+        print "{}th percentile for {}: {:,}".format(q, degree, round(numpy.percentile(data, q)))
 
     def run(self):
         nodes = self.db[self.NODES_COLLECTION].find({})
         inDegrees = []
-        outDegress = []
+        outDegrees = []
         for node in nodes:
             try:
-                inDegrees.append(UserInfo.getNumber(node["following"]))
-                outDegress.append(UserInfo.getNumber(node["followers"]))
+                outDegrees.append(UserInfo.getNumber(node["following"]))
+                inDegrees.append(UserInfo.getNumber(node["followers"]))
             except KeyError:
                 pass
 
-        print "DEGREES DESCRIPTIVE STATISTICS"
-        print "Mean indegree: %s" % numpy.mean(inDegrees)
-        print "Mean outdegree: %s" % numpy.mean(outDegress)
+        print "DEGREES DESCRIPTIVE STATISTICS\n"
+        print "Mean indegree: {:,}".format(numpy.mean(inDegrees))
+        print "Mean outdegree: {:,}".format(numpy.mean(outDegrees))
+        print ""
+        print "Standard Variation indegree: {:,}".format(round(numpy.std(inDegrees), 2))
+        print "Standard Variation outdegree: {:,}".format(round(numpy.std(outDegrees), 2))
+        print ""
+        print "Variance indegree: {:,}".format(round(numpy.var(inDegrees), 2))
+        print "Variance outdegree: {:,}".format(round(numpy.var(outDegrees), 2))
+        print ""
+        print "Max indegree: {:,}".format(numpy.amax(inDegrees))
+        print "Max outdegree: {:,}".format(numpy.amax(outDegrees))
+        print ""
 
-        print "Standard Variation indegree: %s" % round(numpy.std(inDegrees), 2)
-        print "Standard Variation outdegree: %s" % round(numpy.std(outDegress), 2)
-
-        print "Variance indegree: %s" % round(numpy.var(inDegrees), 2)
-        print "Variance outdegree: %s" % round(numpy.var(outDegress), 2)
-
-        print "Max indegree: %s" % numpy.amax(inDegrees)
-        print "Max outdegree: %s" % numpy.amax(outDegress)
-
-        for q in [60,80,90, 99]:
+        for q in [60, 80, 90, 95, 99]:
             self.percentileStat("indegree", inDegrees, q)
-            self.percentileStat("outdegree", outDegress, q)
+            self.percentileStat("outdegree", outDegrees, q)
+            print ""
