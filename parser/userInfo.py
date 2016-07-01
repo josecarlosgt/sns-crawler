@@ -101,6 +101,9 @@ class UserInfo:
 
         self.printAttr()
 
+    def getFollowers(self):
+        return self.followers
+
     def printAttr(self):
         self.logger.info("Parsed information for node: %s" % self.id)
         self.logger.info("\t# Tweets: %s" % self.tweets)

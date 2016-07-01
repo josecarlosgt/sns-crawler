@@ -17,7 +17,7 @@ class MasterThread (threading.Thread):
     def __init__(self,
         nodeId, level,
         logger, db, ip,
-        INVALID_IDS, SAMPLE_SIZE):
+        INVALID_IDS, SAMPLE_SIZE, MAX_INDEGREE):
 
         threading.Thread.__init__(self)
 
@@ -28,6 +28,7 @@ class MasterThread (threading.Thread):
         self.ip = ip
         self.INVALID_IDS = INVALID_IDS
         self.SAMPLE_SIZE = SAMPLE_SIZE
+        self.MAX_INDEGREE = MAX_INDEGREE
 
     def processNode(self, info, nodeId):
         u = UserInfo(info,
@@ -35,6 +36,8 @@ class MasterThread (threading.Thread):
             Logger.clone(self.logger, UserInfo.CLASS_NAME))
         u.parse()
         self.db.insertNode(u, nodeId)
+
+        return u
 
     def processEdges(self, nodesCont, direction, level, nodeId):
         self.logger.info("Processing %s edges for node %s" % (direction, nodeId))
@@ -70,9 +73,10 @@ class MasterThread (threading.Thread):
         self.logger.info("Collecting %s edges for node %s" % (direction, nodeId))
 
         data=""
+        nodeData = None
         try:
             conn = httplib.HTTPConnection(self.ip)
-            url = "/%s?sample_size=%s&direction=%s&user_info=%s" %\
+            url = "/connections?user=%s&sample_size=%s&direction=%s&user_info=%s" %\
                 (nodeId, self.SAMPLE_SIZE, direction, userInfo)
             self.logger.info("Connecting to: %s%s" % (self.ip, url))
             conn.request("GET", url)
@@ -83,18 +87,17 @@ class MasterThread (threading.Thread):
             self.logger.\
                 error("Connection refused when collecting edges for node %s" %\
                     nodeId)
-            return
+            return nodeData
         except HTTPException:
             self.logger.\
                 error("HTTP error when collecting edges for node %s" % nodeId)
-            return
+            return nodeData
 
         soup = BeautifulSoup(data, 'html.parser')
-
         if(userInfo == 1):
-            userInfo = soup.find("user_info")
-            if(userInfo is not None):
-                self.processNode(userInfo, nodeId)
+            userData = soup.find("user_info")
+            if(userData is not None):
+                nodeData = self.processNode(userData, nodeId)
 
         edges = soup.find(direction)
         self.processEdges(edges, direction, level, nodeId)
@@ -102,8 +105,16 @@ class MasterThread (threading.Thread):
         # Remove node from BFS queue
         self.db.removeBFSQ(nodeId)
 
+        return nodeData
+
     def run(self):
         self.logger.info("Processing node: %s[L%s] - IP: %s" %\
             (self.nodeId, self.level, self.ip))
-        self.collectEdges(self.level, self.nodeId, self.OUT_EDGES_KEY, 1)
-        self.collectEdges(self.level, self.nodeId, self.IN_EDGES_KEY, 0)
+        nodeData = self.collectEdges(self.level, self.nodeId, self.OUT_EDGES_KEY, 1)
+        if(nodeData is not None):
+            if(nodeData.getFollowers() <= self.MAX_INDEGREE):
+                nodeData = self.collectEdges(self.level, self.nodeId, self.IN_EDGES_KEY, 0)
+            else:
+                self.logger.info("Skipping %s edges for node %s. Maximum is reached (%s)." % (self.IN_EDGES_KEY, self.nodeId, self.MAX_INDEGREE))
+        else:
+            self.logger.info("Skipping %s edges for node %s. No profile found." % (self.IN_EDGES_KEY, self.nodeId))

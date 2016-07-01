@@ -7,28 +7,39 @@ var Console = require('console').Console;
 
 // Global Settings
 
-var config = JSON.parse(fs.readFileSync('../configuration.json.base', 'utf8'));
-var logFile = config.SlaveLogging.webServerLogFile;
+var GLOBALS = {
+  config: JSON.parse(fs.readFileSync('../configuration.json.base', 'utf8')),
+  port: 3000,
+  parser: "./parse_pages.sh"
+}
 
-// Logging
-
-const output = fs.createWriteStream(logFile);
-const errorOutput = fs.createWriteStream(logFile);
-const logger = new Console(output, errorOutput);
-
-// Constants
-
-const port = 3000;
-const PARSER = "./parse_pages.sh";
+var createLog = function(){
+  GLOBALS.output = fs.createWriteStream(GLOBALS.config.SlaveLogging.webServerLogFile);
+  GLOBALS.errorOutput = fs.createWriteStream(GLOBALS.config.SlaveLogging.webServerLogFile);
+  GLOBALS.logger = new Console(GLOBALS.output, GLOBALS.errorOutput);
+}
+createLog();
 
 // Create a server
 var app = express();
-app.get('/*', function (req, res) {
-   logger.log("Request for " + req.originalUrl + " received");
+app.get('/clear-log', function (req, res) {
+  var crawlerLogFile = GLOBALS.config.SlaveLogging.crawlerLogFile;
+  fs.writeFileSync(crawlerLogFile, "");
 
-   user = req.path.replace('/','');
+  GLOBALS.output.end()
+  GLOBALS.errorOutput.end()
+  fs.writeFileSync(GLOBALS.config.SlaveLogging.webServerLogFile, "");
+  createLog();
+
+  res.send("OK");
+});
+
+app.get('/connections', function (req, res) {
+   GLOBALS.logger.log("Request for " + req.originalUrl + " received");
    errorMsg = "";
-   if(user == "") {
+
+   user = req.query.user;
+   if(user == undefined) {
      errorMsg = "Empty user in request. ";
    }
    sampleSize = req.query.sample_size
@@ -44,33 +55,33 @@ app.get('/*', function (req, res) {
       errorMsg = errorMsg + "Empty user_info in request. ";
     }
     if(errorMsg == "") {
-      logger.log("Processing request for user: <" + user + "> " +
+      GLOBALS.logger.log("Processing request for user: <" + user + "> " +
         "sample size: <" + sampleSize + "> " +
         "direction: <" + direction + "> " +
         "userInfo: <" + userInfo + ">");
 
-      parserCall = PARSER + " " + direction  + " " +
+      parserCall = GLOBALS.parser + " " + direction  + " " +
         user + " " + userInfo + " " + sampleSize;
       maxBuffer = 1024*1024;
-      logger.log("EXECUTING PARSER: " + parserCall);
+      GLOBALS.logger.log("EXECUTING PARSER: " + parserCall);
       exec(parserCall, {maxBuffer: maxBuffer }, (error, stdout, stderr) => {
         if (error) {
-          logger.error("exec error: ${error}");
+          GLOBALS.logger.error("exec error: ${error}");
           res.status(500).send(error);
         } else {
           res.send(stdout);
         }
       });
    } else {
-     logger.log(errorMsg);
+     GLOBALS.logger.log(errorMsg);
      res.status(500).send(errorMsg);
    }
 });
 
-var server = app.listen(port, function () {
+var server = app.listen(GLOBALS.port, function () {
   var host = server.address().address
   var port = server.address().port
 
-  logger.log("Server running at http://%s:%s", host, port)
+  GLOBALS.logger.log("Server running at http://%s:%s", host, port)
 });
 server.timeout = 1000 * 3600;

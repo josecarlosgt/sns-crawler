@@ -1,6 +1,9 @@
 import logging
 import datetime
 import time
+import httplib
+import socket
+from httplib import HTTPException
 from pymongo.errors import ServerSelectionTimeoutError
 
 from database.mongoDB import MongoDB
@@ -37,6 +40,7 @@ class Master:
         self.EGO_ID = config["SNS"]["egoId"]
         self.INVALID_IDS = config["SNS"]["invalidIds"]
         self.SAMPLE_SIZE = config["SNS"]["sampleSize"]
+        self.MAX_INDEGREE = config["SNS"]["maxInDegree"]
 
         self.TOP_LEVEL = config["BFS"]["topLevel"]
         self.BFSQ_LEVEL_SIZE = config["BFS"]["levelSize"]
@@ -68,7 +72,8 @@ class Master:
                         self.db,
                         ip,
                         self.INVALID_IDS,
-                        self.SAMPLE_SIZE
+                        self.SAMPLE_SIZE,
+                        self.MAX_INDEGREE
                     )
                     threads.append(thread)
                     thread.start()
@@ -97,6 +102,24 @@ class Master:
 
     def start(self):
         LEVEL_0 = 0
+
+        # Clearing logs in slave instances
+        for ip in self.ipsPool:
+            try:
+                conn = httplib.HTTPConnection(ip)
+                url = "/clear-log"
+                self.logger.info("Connecting to: %s%s" % (ip, url))
+                conn.request("GET", url)
+                r = conn.getresponse()
+                data = r.read()
+                self.logger.info("Logs cleared in %s%s: %s" % (ip, url, data))
+                conn.close()
+            except socket.error:
+                self.logger.\
+                    error("Connection refused while clearing log for instance %s" % ip)
+            except HTTPException:
+                self.logger.\
+                    error("HTTP error while clearing log for instance %s" % ip)
 
         try:
             self.db.createEdgesIndex()
