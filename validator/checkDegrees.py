@@ -14,8 +14,8 @@ class CheckDegrees:
     def run(self):
         nodes = self.db[self.NODES_COLLECTION].find({})
         for node in nodes:
-            inEdgesP = node["followers"]
-            outEdgesP = node["following"]
+            inEdgesP = str(node["followers"])
+            outEdgesP = str(node["following"])
             outEdgesPI = 0
             inEdgesPI = 0
             try:
