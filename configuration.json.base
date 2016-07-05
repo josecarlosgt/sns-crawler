@@ -2,16 +2,36 @@
   "SNS": {
     "egoId": "fsm2016wsf",
     "invalidIds": ["josecarlosgt05","josecarlosauck"],
-    "sampleSize": -1,
-    "maxInDegree": 60000
+    "cursorCount": -1,
+    "maxDegree": 75000,
+    "profileAttributes": ["id_str",
+      "screen_name",
+
+      "name",
+      "profile_image_url",
+      "location",
+      "url",
+      "protected",
+
+      "retweet_count",
+      "statuses_count",
+      "friends_count",
+      "followers_count",
+      "favourites_count"
+    ]
   },
   "BFS": {
-    "topLevel": 2,
+    "finalLevel": 2,
     "levelSize": -1
   },
   "Multithreading": {
-    "threadsPoolSize": 50,
-    "threadsIntervalTime": 5,
+    "threadsPoolSize": 100,
+    "threadsIntervalTime": 1,
+    "windowTime": 15,
+    "ProfilesWindowRequestsNumber": 60,
+    "ProfilesRequestSize": 100,
+    "FollowersWindowRequestsNumber": 15,
+    "FollowersRequestSize": 5000,
     "ipsPool": ["127.0.0.1:3000"]
   },
   "MasterLogging": {
@@ -21,5 +41,31 @@
   "SlaveLogging": {
     "crawlerLogFile": "/var/log/sns-crawler/bash_crawler",
     "webServerLogFile": "/var/log/sns-crawler/web_server"
+  },
+  "SlaveWebService": {
+    "port": 3000,
+    "parser": "./parse_pages.sh"
+  },
+  "TwitterApplicationsLabels": {
+    "127.0.0.1:3000": "1",
+    "A": "2",
+    "B": "3",
+    "C": "4",
+    "D": "5",
+
+    "1": {
+      "consumerKey": "HYRDwyXR0lInQE5GtMGbVCRtf",
+      "consumerSecret": "GqXn4vZ0UWc6P286hxhxUpSglteskQ1WEuyaHP5QnzSyjPLUMQ",
+      "accessToken": "4569200370-SJmvtt7H1qLrc7EfzbPxWta9UAPYqKiX9k0quCo",
+      "accessTokenSecret": "S0OAVja67nx3xXVs5KSXJNfENpoWovqBUDG6wBXL874s4"
+    },
+    "2": {
+    },
+    "3": {
+    },
+    "4": {
+    },
+    "5": {
+    }
   }
 }

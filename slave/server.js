@@ -4,24 +4,62 @@ var url = require('url');
 var express = require('express');
 var exec = require('child_process').exec;
 var Console = require('console').Console;
+var util = require('util');
 
-// Global Settings
+var TwitterAPIClient = require('./twitter-api-client').APIClient;
+var TwitterWebSiteCrawler = require('./twitter-api-client').WebSiteCrawler;
 
+// Global settings
 var GLOBALS = {
-  config: JSON.parse(fs.readFileSync('../configuration.json.base', 'utf8')),
-  port: 3000,
-  parser: "./parse_pages.sh"
+  API: "A",
+  WEBSITE: "W",
+  config: JSON.parse(fs.readFileSync('../configuration.json.base', 'utf8'))
 }
+GLOBALS.port = GLOBALS.config.SlaveWebService.port;
 
-var createLog = function(){
+// Logging settings
+var createLogger = function(){
   GLOBALS.output = fs.createWriteStream(GLOBALS.config.SlaveLogging.webServerLogFile);
   GLOBALS.errorOutput = fs.createWriteStream(GLOBALS.config.SlaveLogging.webServerLogFile);
   GLOBALS.logger = new Console(GLOBALS.output, GLOBALS.errorOutput);
 }
-createLog();
+createLogger();
 
-// Create a server
+// Create the web server
 var app = express();
+
+app.get('/connections', function(req, res) {
+  method = req.query.method;
+  if(method == GLOBALS.API) {
+    appLabel = req.query.app_label;
+    appConfig = GLOBALS.config.TwitterApplicationsLabels[appLabel];
+    console.log(TwitterAPIClient);
+
+    var client = new TwitterAPIClient(appConfig);
+    console.log(client);
+    //console.log(client.test());
+
+  } else if (method == GLOBALS.WEBSITE) {
+    var parser = GLOBALS.config.SlaveWebService.parser;
+    var crawler = new TwitterWebSiteCrawler(parser);
+    console.log(crawler.test());
+
+
+  }
+  /*
+  var error = function (err, response, body) {
+      console.log('ERROR [%s]', err);
+  };
+  var success = function (data, limits) {
+      console.log('Data [%s]', data);
+      console.log('Data [%s]', util.inspect(limits, false, null));
+  };
+
+  twitter.getFollowers("josecarlosgt05", success, error);
+  //console.log(twitter.test());
+  */
+});
+
 app.get('/clear-log', function (req, res) {
   var crawlerLogFile = GLOBALS.config.SlaveLogging.crawlerLogFile;
   fs.writeFileSync(crawlerLogFile, "");
@@ -29,12 +67,12 @@ app.get('/clear-log', function (req, res) {
   GLOBALS.output.end()
   GLOBALS.errorOutput.end()
   fs.writeFileSync(GLOBALS.config.SlaveLogging.webServerLogFile, "");
-  createLog();
+  createLogger();
 
   res.send("OK");
 });
 
-app.get('/connections', function (req, res) {
+app.get('/connectionsx', function (req, res) {
    GLOBALS.logger.log("Request for " + req.originalUrl + " received");
    errorMsg = "";
 

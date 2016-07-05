@@ -8,6 +8,8 @@ class MongoDB:
     # Constants
     CLASS_NAME="MongoDB"
     DATABASE_NAME = "research_db"
+    TWITTER_SNAME_ID_KEY = "twitterSN"
+    TWITTER_ID_KEY = "twitterID"
 
     def __init__(self, timeId, logger):
         self.timeId = timeId;
@@ -19,36 +21,71 @@ class MongoDB:
 
     # Breadth first search queue operations
 
-    def retrieveBFSQ(self, level, limit):
+    def retrieveBFSQ_0(self, options, limit):
         queue = self.db.BFSQ
-        options = {"level": level, "visited": False}
 
         if(limit > 0):
             return queue.find(options, no_cursor_timeout=True).limit(limit)
         else:
             return queue.find(options, no_cursor_timeout=True)
 
-    def updateBFSQ(self, id, level):
+    def retrieveBFSQ(self, level, limit):
+        options = {"level": level}
+
+        return self.retrieveBFSQ_0(options, limit)
+
+    def retrieve4FollowersBFSQ(self, level, limit):
+        options = {"level": level, "followersVisited": False}
+
+        return self.retrieveBFSQ_0(options, limit)
+
+    def retrieve4FollowingBFSQ(self, level, limit):
+        options = {"level": level, "followingVisited": False}
+
+        return self.retrieveBFSQ_0(options, limit)
+
+    def enqueBFSQ(self, nodeData, level):
         queue = self.db.BFSQ
         try:
-            node = { "_id": id, "level": level, "visited": False}
+            node = { "level": level,
+                "followersVisited": False,
+                "followingVisited": False }
+            node.update(nodeData)
             queue.insert_one(node)
-            self.logger.info("Node %s added in BSF queue level %i" % (id, level))
+            self.logger.info("Node %s added in BSF queue level %i" % (node, level))
 
         except DuplicateKeyError:
-            self.logger.info("Node %s already exists in BSF queue level %i" % (id, level))
+            self.logger.info("Node %s already exists in BSF queue level %i" % (node, level))
 
             return False
 
         return True
 
-    def removeBFSQ(self, id):
+    def updateBFSQ(self, profile):
+        queue = self.db.BFSQ
+
+        queue.update_one({ self.TWITTER_ID_KEY: profile["id_str"] },
+            { "$set": {
+                self.TWITTER_SNAME_ID_KEY: profile["screen_name"]
+            }})
+        queue.update_one({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] },
+            { "$set": {
+                self.TWITTER_ID_KEY: profile["id_str"]
+            }})
+
+        self.logger.info("Node updated in BSF queue: %s" % (profile))
+
+        return True
+
+    '''
+    def dequeBFSQ(self, id):
         queue = self.db.BFSQ
 
         queue.update_one({ "_id": id }, { "$set": {"visited": True} })
         self.logger.info("Node %s checked as visited in BSF queue" % id)
 
         return True
+    '''
 
     def clearBFSQ(self):
         queue = self.db.BFSQ
@@ -72,48 +109,61 @@ class MongoDB:
         self.logger.info(
             "Creating indexes for nodes collection")
         self.db['nodes'].create_index([
-            ('twitterID', pymongo.ASCENDING)],
+            (self.TWITTER_ID_KEY, pymongo.ASCENDING),
+            (self.TWITTER_SNAME_ID_KEY, pymongo.ASCENDING)],
+        unique=True);
+
+    def createBFSQIndex(self):
+        self.logger.info(
+            "Creating indexes for BFSQ collection")
+        self.db['BFSQ'].create_index([
+            (self.TWITTER_ID_KEY, pymongo.ASCENDING),
+            (self.TWITTER_SNAME_ID_KEY, pymongo.ASCENDING)],
         unique=True);
 
     def createNodesValidatorIndex(self):
         self.logger.info(
             "Creating indexes for collection: %s" % 'nodes' + self.timeId)
         self.db['nodes' + self.timeId].create_index([
-            ('twitterID', pymongo.ASCENDING)],
+            (self.TWITTER_ID_KEY, pymongo.ASCENDING)],
         unique=True);
 
     # Network operations
 
-    def insertNode(self, info, id):
+    def insertNode(self, profile, ip):
         nodesCollection = self.db.nodes
         nodesValidatorCollection = self.db['nodes' + self.timeId]
         node = {
-            "twitterID": id,
+            self.TWITTER_ID_KEY: profile["id_str"],
+            self.TWITTER_SNAME_ID_KEY: profile["screen_name"],
             "initialTimeId": self.timeId,
-            "name": info.name,
-            "image": info.image,
-            "webSite": info.webSite,
-            "location": info.location
+
+            "name": profile["name"],
+            "profile_image_url": profile["profile_image_url"],
+            "url": profile["url"],
+            "location": profile["location"]
         }
         nodeValidator = {
-            "twitterID": id,
+            self.TWITTER_ID_KEY: profile["id_str"],
             "timeId": self.timeId,
-            "tweets": info.tweets,
-            "following": info.following,
-            "followers": info.followers,
-            "favourites": info.favourites,
-            "private": info.private,
-            "collectorIP": info.ip
+            "collectorIP": ip,
+
+            "statuses_count": profile["statuses_count"],
+            "friends_count": profile["friends_count"],
+            "followers_count": profile["followers_count"],
+            "favourites_count": profile["favourites_count"],
+            "retweet_count": profile["retweet_count"],
+            "protected": profile["protected"]
         }
         try:
             nodesCollection.insert_one(node)
-            self.logger.info("Adding node to network: %s" % id)
+            self.logger.info("Adding node to network: %s" %  node)
         except DuplicateKeyError:
             pass
 
         try:
             nodesValidatorCollection.insert_one(nodeValidator)
-            self.logger.info("Adding node validator to network: %s" % id)
+            self.logger.info("Adding node validator to network: %s" % nodeValidator)
         except DuplicateKeyError:
             pass
 

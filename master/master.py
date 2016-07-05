@@ -1,20 +1,22 @@
 import logging
 import datetime
-import time
 import httplib
 import socket
 from httplib import HTTPException
 from pymongo.errors import ServerSelectionTimeoutError
 
-from database.mongoDB import MongoDB
 from logger import Logger
-from masterThread import MasterThread
+from database.mongoDB import MongoDB
+from configKeys import ConfigKeys
+from readProfiles import ReadProfiles
 
 class Master:
     # Constants
     CLASS_NAME="Master"
 
     def __init__(self, config):
+        self.config = config
+
         today = datetime.date.today()
         timeId = today.strftime('%d_%m_%Y')
 
@@ -33,70 +35,63 @@ class Master:
             for option, value in sValue.iteritems():
                 self.logger.info("\t %s: %s" % (option, value))
 
-        self.ipsPool = config["Multithreading"]["ipsPool"]
-        self.THREADS_POOL_SIZE = config["Multithreading"]["threadsPoolSize"]
-        self.THREADS_INTERVAL_TIME = config["Multithreading"]["threadsIntervalTime"]
-
-        self.EGO_ID = config["SNS"]["egoId"]
-        self.INVALID_IDS = config["SNS"]["invalidIds"]
-        self.SAMPLE_SIZE = config["SNS"]["sampleSize"]
-        self.MAX_INDEGREE = config["SNS"]["maxInDegree"]
-
-        self.TOP_LEVEL = config["BFS"]["topLevel"]
-        self.BFSQ_LEVEL_SIZE = config["BFS"]["levelSize"]
-
         self.db = MongoDB(timeId,
             Logger.clone(self.logger, MongoDB.CLASS_NAME))
 
-    def breadth_first_search(self, level):
-        self.logger.info("CREATING THREADS for level %i" %\
+    def read_profiles(self, level):
+        readProfiles = ReadProfiles(
+            level,
+            Logger.clone(
+                self.logger, ReadProfiles.CLASS_NAME),
+                self.db,
+                self.config
+        )
+        readProfiles.start()
+
+    def create_connections(self, level):
+        self.logger.info("CREATING MASTER CONNECTION THREADS for level %i" %\
             level)
+        '''
+        threadFollowing = MasterFollowingThread(
+            level,
+            Logger.clone(
+                self.logger, MasterFollowingThread.CLASS_NAME),
+                self.db,
+                self.ipsPool,
+                self.WINDOW_FOLLOWERS_REQUESTS_SIZE,
+                self.THREADS_INTERVAL_TIME,
+                self.INVALID_IDS,
+                self.SAMPLE_SIZE,
+                self.MAX_DEGREE
+        )
+        threadFollowers = MasterFollowersThread(
+            level,
+            Logger.clone(
+                self.logger, MasterFollowersThread.CLASS_NAME),
+                self.db,
+                self.ipsPool,
+                self.WINDOW_FOLLOWERS_REQUESTS_SIZE,
+                self.WINDOW_TIME,
+                self.INVALID_IDS,
+                self.SAMPLE_SIZE,
+                self.MAX_DEGREE
+        )
 
-        # Retrieve nodes from current level
-        nodes = self.db.retrieveBFSQ(level - 1, self.BFSQ_LEVEL_SIZE)
-        threads = []
-        hasMoreNodes = True
-        while(hasMoreNodes):
-            i = 1
-            for count in range(0, self.THREADS_POOL_SIZE):
-                try:
-                    node = nodes.next()
-                    ip = self.ipsPool.pop(0)
-                    self.ipsPool.append(ip)
-                    nodeId = node["_id"]
-                    thread = MasterThread(
-                        nodeId,
-                        level,
-                        Logger.clone(
-                            self.logger, MasterThread.CLASS_NAME + "-" + nodeId),
-                        self.db,
-                        ip,
-                        self.INVALID_IDS,
-                        self.SAMPLE_SIZE,
-                        self.MAX_INDEGREE
-                    )
-                    threads.append(thread)
-                    thread.start()
-                    time.sleep(self.THREADS_INTERVAL_TIME)
-                except StopIteration:
-                    hasMoreNodes = False
-                    self.logger.info("ALL NODES IN BFSQ RETRIEVED (level %i)" %\
-                        (level))
-                    break
+        threadFollowing.start()
+        threadFollowers.start()
 
-            # Wait until all threads finish to continue with next level
-            self.logger.info("WAITING FOR %ith POOL OF %i THREADS (level %i)" %\
-                (i, len(threads), level))
-            for t in threads: t.join()
-            self.logger.info("ALL %ith POOL OF %i THREADS FINISHED (level %i)" %\
-                (i, len(threads), level))
-            i = i + 1
-            threads = []
+        threadFollowing.join()
+        threadFollowers.join()
+        '''
+    def breadth_first_search(self, level):
+        # Stage 1: Read profiles
+        self.read_profiles(level);
 
-        self.logger.info("LEVEL %i COMPLETED" % level)
+        # Stage 2: Create connections
+        self.create_connections(level);
 
         # Proceed with next level
-        if(level < self.TOP_LEVEL):
+        if(level < self.config[ConfigKeys.BFS][ConfigKeys.FINAL_LEVEL]):
             next_level = level + 1
             self.breadth_first_search(next_level)
 
@@ -104,7 +99,7 @@ class Master:
         LEVEL_0 = 0
 
         # Clearing logs in slave instances
-        for ip in self.ipsPool:
+        for ip in self.config[ConfigKeys.MULTITHREADING][ConfigKeys.IPS_POOL]:
             try:
                 conn = httplib.HTTPConnection(ip)
                 url = "/clear-log"
@@ -122,15 +117,17 @@ class Master:
                     error("HTTP error while clearing log for instance %s" % ip)
 
         try:
+            self.db.clearBFSQ()
+
+            self.db.createBFSQIndex()
             self.db.createEdgesIndex()
             self.db.createNodesIndex()
             self.db.createNodesValidatorIndex()
 
-            # Disable this when resuming a failed operation
-            self.db.clearBFSQ()
-
             # Add seed node to the bfs_queue
-            self.db.updateBFSQ(self.EGO_ID, LEVEL_0)
+            self.db.enqueBFSQ({MongoDB.TWITTER_SNAME_ID_KEY:\
+                self.config[ConfigKeys.SNS][ConfigKeys.EGO_ID]},
+                LEVEL_0)
 
             # Start bfs
             self.breadth_first_search(LEVEL_0 + 1)

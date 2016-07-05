@@ -34,4 +34,4 @@ END: Jun 30 12:27
 
 timeID: 1_07_2016
 START: Jul 01 12:17
-END: Jul 01
+END: Jul 01 20:47
