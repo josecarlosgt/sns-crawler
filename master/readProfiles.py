@@ -59,7 +59,6 @@ class ReadProfiles:
                         except StopIteration:
                             self.logger.info("ALL NODES %i IN BFSQ RETRIEVED (level %i)" %\
                                 (nodesCount, self.level))
-
                             hasMoreNodes = False
                             profCount = -2
                             reqCount = -2

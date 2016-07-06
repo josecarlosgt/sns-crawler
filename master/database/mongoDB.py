@@ -77,15 +77,20 @@ class MongoDB:
 
         return True
 
-    '''
-    def dequeBFSQ(self, id):
+    def dequeBFSQ(self, id, visitedType):
         queue = self.db.BFSQ
 
-        queue.update_one({ "_id": id }, { "$set": {"visited": True} })
+        queue.update_one({ self.TWITTER_ID_KEY: id },
+            { "$set": {visitedType: True} })
         self.logger.info("Node %s checked as visited in BSF queue" % id)
 
         return True
-    '''
+
+    def deque4FollowersBFSQ(self, id):
+        return self.dequeBFSQ(id, "followersVisited")
+
+    def deque4FollowingBFSQ(self, id):
+        return self.dequeBFSQ(id, "followingVisited")
 
     def clearBFSQ(self):
         queue = self.db.BFSQ

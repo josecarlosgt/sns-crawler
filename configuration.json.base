@@ -1,7 +1,7 @@
 {
   "SNS": {
     "egoId": "fsm2016wsf",
-    "invalidIds": ["josecarlosgt05","josecarlosauck"],
+    "invalidIds": ["josecarlosgt05", "4569200370"],
     "cursorCount": -1,
     "maxDegree": 75000,
     "profileAttributes": ["id_str",
@@ -44,7 +44,7 @@
   },
   "SlaveWebService": {
     "port": 3000,
-    "parser": "./parse_pages.sh"
+    "parser": "./shell-crawler/parse_pages.sh"
   },
   "TwitterApplicationsLabels": {
     "127.0.0.1:3000": "1",

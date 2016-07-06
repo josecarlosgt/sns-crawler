@@ -5,9 +5,9 @@ from database.mongoDB import MongoDB
 from logger import Logger
 from submMasterThread import SubMasterThread
 
-class MasterFollowingThread:
+class MasterFollowersThread:
     # Constants
-    CLASS_NAME="MasterFollowingThread"
+    CLASS_NAME="MasterFollowersThread"
 
     def __init__(self,
         level,
@@ -26,7 +26,7 @@ class MasterFollowingThread:
             self.level)
 
         # Retrieve nodes from previous level
-        nodes = self.db.retrieve4FollowingBFSQ(self.level - 1,
+        nodes = self.db.retrieve4FollowersBFSQ(self.level - 1,
             self.config[ConfigKeys.BFS][ConfigKeys.LEVEL_SIZE])
         threads = []
         hasMoreNodes = False
@@ -39,38 +39,49 @@ class MasterFollowingThread:
         ipsPool = copy.copy(self.config[ConfigKeys.MULTITHREADING][ConfigKeys.IPS_POOL])
         while(hasMoreNodes):
             i = 1
-            for count in range(0, self.config[ConfigKeys.MULTITHREADING][ConfigKeys.THREADS_POOL_SIZE]):
+            # Create a thread per available ip: One thread for each node
+            ipsCount = 0
+            while ipsCount >= 0 and ipsCount < len(ipsPool):
+                ip = ipsPool.pop(0)
+                ipsPool.append(ip)
+
                 try:
                     node = nodes.next()
-                    ip = ipsPool.pop(0)
-                    ipsPool.append(ip)
                     thread = SubMasterThread(
-                        ConfigKeys.OUT_EDGES_KEY
+                        ConfigKeys.IN_EDGES_KEY,
                         node,
                         self.level,
                         Logger.clone(
-                            self.logger, SubMasterThread.CLASS_NAME + "-FOLLOWING-" + ip),
+                            self.logger, SubMasterThread.CLASS_NAME + "-FOLLOWERS-" + ip),
                         self.db,
                         ip,
                         self.config
                     )
                     threads.append(thread)
                     thread.start()
-                    time.sleep(self.THREADS_INTERVAL_TIME)
+
                 except StopIteration:
-                    hasMoreNodes = False
-                    self.logger.info("ALL NODES IN BFSQ RETRIEVED (level %i)" %\
-                        (self.level))
-                    break
+                    self.logger.info("ALL NODES %i IN BFSQ RETRIEVED (level %i)" %\
+                        (nodesCount, self.level))
+                        hasMoreNodes = False
+                        ipsCount = -2
+
+                ipsCount += 1
 
             # Wait until all threads finish to continue with next level
             self.logger.info("WAITING FOR %ith POOL OF %i THREADS (level %i)" %\
                 (i, len(threads), self.level))
             for t in threads: t.join()
-            
+
             self.logger.info("ALL %ith POOL OF %i THREADS FINISHED (level %i)" %\
                 (i, len(threads), self.level))
             i = i + 1
             threads = []
+
+            if(hasMoreNodes):
+                self.logger.info("Sleeping for %s min." %\
+                    self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME])
+                time.sleep(
+                    self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME] * 60)
 
         self.logger.info("LEVEL %i COMPLETED" % self.level)

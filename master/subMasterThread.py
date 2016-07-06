@@ -29,45 +29,43 @@ class SubMasterThread (threading.Thread):
         self.ip = ip
         self.config = config
 
-    def processEdges(self, nodesCont, direction, level, nodeId):
-        self.logger.info("Processing %s edges for node %s" % (direction, nodeId))
+    def processEdges(self, edges, responseIdentifier):
+        self.logger.info("Processing %s edges for node %s" %\
+            (self.type, self.node))
 
-        # Parse output from html parser
-        snames = []
-        if(nodesCont is not None):
-            nodes = nodesCont.next
-
-            snames = set([sname.strip() \
-                for sname in nodes.splitlines() if len(sname.strip()) > 0])
-            invalids = self.INVALID_IDS + [nodeId]
+        invalids = self.config[ConfigKeys.SNS][ConfigKeys.INVALID_IDS] +\
+            self.node[MongoDB.TWITTER_ID_KEY] + self.node[MongoDB.TWITTER_SNAME_ID_KEY]
             for invalid in invalids:
                 try:
-                    snames.remove(invalid)
-                    #self.logger.\
-                    #    info("Invalid node %s eliminated" % invalid)
+                    edges.remove(invalid)
                 except KeyError:
                     pass
-                    # self.logger.\
-                    #    info("Invalid node %s doesn't exist" % invalid)
 
-            for sname in snames:
-                # Add edges to network
-                if(direction == self.IN_EDGES_KEY):
-                    self.db.insertEdge(sname, nodeId)
-                elif(direction == self.OUT_EDGES_KEY):
-                    self.db.insertEdge(nodeId, sname)
-                # Update BFS queue with out-edges
-                self.db.updateBFSQ(sname, level)
+            # Add edges to network
+            for edge in edges:
+                # For in-edges (followers), the edge is an id
+                if(self.type == ConfigKeys.IN_EDGES_KEY):
+                    self.db.insertEdge(edge, self.node[MongoDB.TWITTER_ID_KEY])
 
-    def collectEdges(self, level, nodeId, direction, userInfo):
-        self.logger.info("Collecting %s edges for node %s" % (direction, nodeId))
+                # For out-edges (following), the edge is a screen name
+                elif(self.type == ConfigKeys.OUT_EDGES_KEY):
+                    self.db.insertEdge(self.node[MongoDB.TWITTER_ID_KEY], edge)
+
+                # Add edge as node to be visited at the bfs queue
+                self.db.enqueBFSQ({responseIdentifier: edge}, self.level)
+
+    def collectEdges(self, requestIdentifier, responseIdentifier):
+        self.logger.info("Collecting %s edges for node %s" % (self.type, self.node))
 
         data=""
-        nodeData = None
         try:
             conn = httplib.HTTPConnection(self.ip)
-            url = "/connections?user=%s&sample_size=%s&direction=%s&user_info=%s" %\
-                (nodeId, self.SAMPLE_SIZE, direction, userInfo)
+            url = "/api-client/%s?app_label=%s&cursor_count=%s&%s" %\
+                (self.type,
+                self.config[ConfigKeys.APP_LABELS][self.ip],
+                self.confing[ConfigKeys.SNS][ConfigKeys.CURSOR_COUNT],
+                requestIdentifier)
+
             self.logger.info("Connecting to: %s%s" % (self.ip, url))
             conn.request("GET", url)
             r = conn.getresponse()
@@ -75,31 +73,25 @@ class SubMasterThread (threading.Thread):
             conn.close()
         except socket.error:
             self.logger.\
-                error("Connection refused when collecting edges for node %s" %\
-                    nodeId)
-            return nodeData
+                error("Socket error when collecting edges for node %s" %\
+                    self.node)
+            return False
         except HTTPException:
             self.logger.\
-                error("HTTP error when collecting edges for node %s" % nodeId)
-            return nodeData
+                error("HTTP error when collecting edges for node %s" %\
+                    self.node)
+            return False
 
-        soup = BeautifulSoup(data, 'html.parser')
-        if(userInfo == 1):
-            userData = soup.find("user_info")
-            if(userData is not None):
-                nodeData = self.processNode(userData, nodeId)
+        try:
+            edges = json.loads(data)
+            self.processEdges(edges, responseIdentifier)
 
+        except ValueError:
+            self.logger.\
+                error("Not valid JSON response received: **%s**" % data)
+            return False
 
-                self.db.insertNode(u, nodeId)
-
-
-        edges = soup.find(direction)
-        self.processEdges(edges, direction, level, nodeId)
-
-        # Remove node from BFS queue
-        self.db.dequeBFSQ(nodeId)
-
-        return nodeData
+        return True
 
     '''
     def processProfile(self, info, nodeId):
@@ -111,7 +103,7 @@ class SubMasterThread (threading.Thread):
         return u
     '''
 
-    def processProfile(self, profile):
+    def processJSONProfile(self, profile):
         for attribute in self.config[ConfigKeys.SNS][ConfigKeys.PROFILE_ATTRIBUTES]:
             if attribute not in profile:
                 profile[attribute] = ""
@@ -123,7 +115,8 @@ class SubMasterThread (threading.Thread):
     def collectProfile(self):
         self.logger.info("Collecting profiles for level %s" % (self.level))
 
-        # Iterate over: requests number * request size (on each ip)
+        # Iterate over: requests number * request size (for this ip)
+        # One HTTP connection per each request
         reqCount = 0
         while reqCount >= 0 and\
             reqCount < self.config[ConfigKeys.MULTITHREADING][ConfigKeys.PROFILES_WINDOW_REQUESTS_NUMBER]:
@@ -160,17 +153,17 @@ class SubMasterThread (threading.Thread):
                 conn.close()
             except socket.error:
                 self.logger.\
-                    error("Socket error when collecting profiles at ip %s" % self.ip)
+                    error("Socket error when collecting profiles")
                 return False
             except HTTPException:
                 self.logger.\
-                    error("HTTP error when collecting profiles at ip %s" % self.ip)
+                    error("HTTP error when collecting profiles")
                 return False
 
             try:
                 profiles = json.loads(data)
                 for profile in profiles:
-                    pprofile = self.processProfile(profile)
+                    pprofile = self.processJSONProfile(profile)
                     self.logger.info("RESPONSE RECEIVED: %s" % pprofile)
                     if(pprofile["friends_count"] <= self.config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE] and\
                         pprofile["followers_count"] <= self.config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE]):
@@ -194,14 +187,17 @@ class SubMasterThread (threading.Thread):
             self.collectProfile()
 
         elif(self.type == ConfigKeys.IN_EDGES_KEY):
-            pass
+            result = self.collectEdges("user_id=" + self.node[MongoDB.TWITTER_ID_KEY],
+                MongoDB.TWITTER_ID_KEY)
+
+            if(result):
+                # Remove node from BFS queue
+                self.db.deque4FollowingBFSQ(self.node[MongoDB.TWITTER_ID_KEY])
+
         elif(self.type == ConfigKeys.OUT_EDGES_KEY):
-            pass
-        # nodeData = self.collectEdges(self.level, self.nodeId, self.OUT_EDGES_KEY, 1)
-        # if(nodeData is not None):
-        #    if(nodeData.getFollowers() <= self.MAX_INDEGREE):
-        #        nodeData = self.collectEdges(self.level, self.nodeId, self.IN_EDGES_KEY, 0)
-        #    else:
-        #        self.logger.info("Skipping %s edges for node %s. Maximum is reached (%s)." % (self.IN_EDGES_KEY, self.nodeId, self.MAX_INDEGREE))
-        #else:
-        #    self.logger.info("Skipping %s edges for node %s. No profile found." % (self.IN_EDGES_KEY, self.nodeId))
+            result = self.collectEdges("screen_name=" + self.node[MongoDB.TWITTER_SNAME_ID_KEY],
+                MongoDB.TWITTER_SNAME_ID_KEY)
+
+            if(result):
+                # Remove node from BFS queue
+                self.db.deque4FollowersBFSQ(self.node[MongoDB.TWITTER_ID_KEY])

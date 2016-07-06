@@ -6,7 +6,7 @@ LOG=$(cat ../configuration.json.base | grep -oE '\/.+bash_crawler')
 
 # Constants
 
-CURL_SCRIPT="./ex_curl.sh"
+CURL_SCRIPT="./shell-crawler/ex_curl.sh"
 SLEEP_TIME=0.05
 ATTEMPTS=5
 ATTEMPTS_INTERVAL=3
@@ -20,21 +20,19 @@ EXTRACT_INFO=0
 if [ $# -ge 3 ]; then
 	CONN=$1; shift
 	CURRENT_SNAME=$1; shift
-	EXTRACT_INFO=$1; shift
 	PSAMPLE=$1
 	if [ -n "$PSAMPLE" ]; then
 		 SAMPLE=$PSAMPLE
 	fi
 else
 	echo "Invalid arguments. Example: " >> $LOG
-	echo "./parse_pages.sh followers PedroDuque__ 0|1 [100]" >> $LOG
+	echo "./parse_pages.sh followers PedroDuque__ [100]|-1" >> $LOG
 	exit 0
 fi
 
-echo "PARAMETERS: connection type=<$CONN>, screen name=<$CURRENT_SNAME>, extract info=<$EXTRACT_INFO> sample=<$SAMPLE> . Ready to proceed ..." >> $LOG
+echo "PARAMETERS: connection type=<$CONN>, screen name=<$CURRENT_SNAME>, sample=<$SAMPLE> . Ready to proceed ..." >> $LOG
 ID="$CURRENT_SNAME-$CONN"
-LOG2_0="$LOG-user-0-$CURRENT_SNAME-$CONN"
-LOG2_1="$LOG-user-1-$CURRENT_SNAME-$CONN"
+
 # Examples of parameters:
 
 # CONN="followers"
@@ -52,24 +50,21 @@ snames=""
 ###################################################################################### Parse initial list
 
 resp0=$($CURL_SCRIPT $CURRENT_SNAME $CONN main)
-echo "**$resp0**" > $LOG2_0 # Logging response
 sleep $SLEEP_TIME # Allow some sime to avoid hacker-like behaviour
 
-# Extract user info
-
-if [ $EXTRACT_INFO -eq "1" ]; then
-	echo "<user_info>$resp0</user_info>"
-fi
-
 # Connections section
-echo "<$CONN>"
+echo "["
 
 # Extract screen names
 
 snames0=""
 for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9_]+"'); do
 	sname=`echo $unpar_name | grep -oE '"[a-zA-Z0-9_]+"' | grep -oE '[a-zA-Z0-9_]+'`
-	snames0="$snames0\n$sname"
+	if [ -n "$snames0" ]; then
+		snames0="$snames0,\n$sname"
+	else
+		snames0=$sname
+	fi
 done
 echo "($ID) INITIAL SCREEN NAMES: $snames0" >> $LOG
 
@@ -104,7 +99,7 @@ resp=""
 while [ $successfulAttempt -eq 0 ] && [ $failedAttempt -eq 0 ] ; do
 	resp=$($CURL_SCRIPT $CURRENT_SNAME $CONN xhr $MAX)
 	sleep $SLEEP_TIME
-	echo "**$resp**" > $LOG2_1 # Logging response
+
 	if [ -n "$resp" ]; then
 		successfulAttempt=1
 		samplec=$(($samplec + 1))
@@ -125,7 +120,11 @@ if [ $failedAttempt -eq 0 ]; then
 	snames1=""
 	for unpar_name in `echo $resp | grep -oE 'screen-name=\\\\"[a-zA-Z0-9_]+\\\\"'`; do
 		sname=`echo $unpar_name | grep -oE '\\\\"[a-zA-Z0-9_]+\\\\"' | grep -oE '[a-zA-Z0-9_]+'`
-		snames1="$snames1\n$sname"
+		if [ -n "$snames1" ]; then
+			snames1="$snames1,\n$sname"
+		else
+			snames1=$sname
+		fi
 	done
 	echo "($ID) SCREEN NAMES: $snames1" >> $LOG
 
@@ -159,7 +158,7 @@ else
 fi
 done
 
-echo "</$CONN>"
+echo "]"
 
 # rm -f $LOG
 # echo "REST FOR A WHILE UNTIL NEXT CRAWLING ..." >> $LOG

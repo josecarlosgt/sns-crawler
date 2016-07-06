@@ -9,6 +9,8 @@ from logger import Logger
 from database.mongoDB import MongoDB
 from configKeys import ConfigKeys
 from readProfiles import ReadProfiles
+from masterFollowersThread import MasterFollowersThread
+from masterFollowingThread import MasterFollowingThread
 
 class Master:
     # Constants
@@ -51,38 +53,28 @@ class Master:
     def create_connections(self, level):
         self.logger.info("CREATING MASTER CONNECTION THREADS for level %i" %\
             level)
-        '''
+
         threadFollowing = MasterFollowingThread(
             level,
             Logger.clone(
                 self.logger, MasterFollowingThread.CLASS_NAME),
                 self.db,
-                self.ipsPool,
-                self.WINDOW_FOLLOWERS_REQUESTS_SIZE,
-                self.THREADS_INTERVAL_TIME,
-                self.INVALID_IDS,
-                self.SAMPLE_SIZE,
-                self.MAX_DEGREE
+                self.config
         )
+        '''
         threadFollowers = MasterFollowersThread(
             level,
             Logger.clone(
                 self.logger, MasterFollowersThread.CLASS_NAME),
                 self.db,
-                self.ipsPool,
-                self.WINDOW_FOLLOWERS_REQUESTS_SIZE,
-                self.WINDOW_TIME,
-                self.INVALID_IDS,
-                self.SAMPLE_SIZE,
-                self.MAX_DEGREE
-        )
-
-        threadFollowing.start()
+                self.config)
+        '''
+        #threadFollowing.start()
         threadFollowers.start()
 
-        threadFollowing.join()
+        #threadFollowing.join()
         threadFollowers.join()
-        '''
+
     def breadth_first_search(self, level):
         # Stage 1: Read profiles
         self.read_profiles(level);
