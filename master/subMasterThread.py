@@ -9,7 +9,7 @@ from profile_parser.userInfo import UserInfo
 from configKeys import ConfigKeys
 from database.mongoDB import MongoDB
 
-class SubMasterThread (threading.Thread):
+class SubMasterThread(threading.Thread):
     # Constants
     CLASS_NAME="SubThread"
 
@@ -30,40 +30,51 @@ class SubMasterThread (threading.Thread):
         self.config = config
 
     def processEdges(self, edges, responseIdentifier):
-        self.logger.info("Processing %s edges for node %s" %\
+        self.logger.info("Processing <%s> edges for node: %s" %\
             (self.type, self.node))
 
-        invalids = self.config[ConfigKeys.SNS][ConfigKeys.INVALID_IDS] +\
-            self.node[MongoDB.TWITTER_ID_KEY] + self.node[MongoDB.TWITTER_SNAME_ID_KEY]
-            for invalid in invalids:
-                try:
-                    edges.remove(invalid)
-                except KeyError:
-                    pass
+        invalids = self.config[ConfigKeys.SNS][ConfigKeys.INVALID_IDS]
+        invalids.append(self.node[MongoDB.TWITTER_ID_KEY])
+        invalids.append(self.node[MongoDB.TWITTER_SNAME_ID_KEY])
+        ''' Remove accounts that should not part of the observations that come
+        in the results of the web crawler, such the origin of the connections
+        (self.node) and other identifiers specified in the configuration such
+        as the account used to authenticate with the Twitter website
+        '''
+        for invalid in invalids:
+            try:
+                edges.remove(invalid)
+                self.logger.info("Removing: <%s> edge for node: %s / %s" %\
+                    (invalid,
+                    self.node[MongoDB.TWITTER_ID_KEY],
+                    self.node[MongoDB.TWITTER_SNAME_ID_KEY]))
+            except ValueError:
+                pass
 
-            # Add edges to network
-            for edge in edges:
-                # For in-edges (followers), the edge is an id
-                if(self.type == ConfigKeys.IN_EDGES_KEY):
-                    self.db.insertEdge(edge, self.node[MongoDB.TWITTER_ID_KEY])
+        # Add edges to network
+        for edge in edges:
+            # For in-edges (followers), the edge is an id
+            if(self.type == ConfigKeys.IN_EDGES_KEY):
+                self.db.insertEdge(edge, self.node[MongoDB.TWITTER_ID_KEY])
 
-                # For out-edges (following), the edge is a screen name
-                elif(self.type == ConfigKeys.OUT_EDGES_KEY):
-                    self.db.insertEdge(self.node[MongoDB.TWITTER_ID_KEY], edge)
+            # For out-edges (following), the edge is a screen name
+            elif(self.type == ConfigKeys.OUT_EDGES_KEY):
+                self.db.insertEdge(self.node[MongoDB.TWITTER_ID_KEY], edge)
 
-                # Add edge as node to be visited at the bfs queue
-                self.db.enqueBFSQ({responseIdentifier: edge}, self.level)
+            # Add edge as node to be visited at the bfs queue
+            self.db.enqueBFSQ({responseIdentifier: edge}, self.level)
 
-    def collectEdges(self, requestIdentifier, responseIdentifier):
-        self.logger.info("Collecting %s edges for node %s" % (self.type, self.node))
+    def collectEdges(self, pathIdentifier, requestIdentifier, responseIdentifier):
+        self.logger.info("Collecting <%s> edges for node: %s" % (self.type, self.node))
 
         data=""
         try:
             conn = httplib.HTTPConnection(self.ip)
-            url = "/api-client/%s?app_label=%s&cursor_count=%s&%s" %\
-                (self.type,
+            url = "/%s/%s?app_label=%s&cursor_count=%s&%s" %\
+                (pathIdentifier,
+                self.type,
                 self.config[ConfigKeys.APP_LABELS][self.ip],
-                self.confing[ConfigKeys.SNS][ConfigKeys.CURSOR_COUNT],
+                self.config[ConfigKeys.SNS][ConfigKeys.CURSOR_COUNT],
                 requestIdentifier)
 
             self.logger.info("Connecting to: %s%s" % (self.ip, url))
@@ -73,23 +84,26 @@ class SubMasterThread (threading.Thread):
             conn.close()
         except socket.error:
             self.logger.\
-                error("Socket error when collecting edges for node %s" %\
+                error("Socket error when collecting edges for node: %s" %\
                     self.node)
             return False
         except HTTPException:
             self.logger.\
-                error("HTTP error when collecting edges for node %s" %\
+                error("HTTP error when collecting edges for node: %s" %\
                     self.node)
             return False
 
-        try:
-            edges = json.loads(data)
-            self.processEdges(edges, responseIdentifier)
+        #try:
+        #    edges = json.loads(data)
+        edgesStr = data.strip("[").strip("]").replace('"', "")
+        edges = edgesStr.split(",")
 
-        except ValueError:
-            self.logger.\
-                error("Not valid JSON response received: **%s**" % data)
-            return False
+        self.processEdges(edges, responseIdentifier)
+
+        #except ValueError:
+        #    self.logger.\
+        #        error("Not valid JSON response received: **%s**" % data)
+        #    return False
 
         return True
 
@@ -104,16 +118,21 @@ class SubMasterThread (threading.Thread):
     '''
 
     def processJSONProfile(self, profile):
-        for attribute in self.config[ConfigKeys.SNS][ConfigKeys.PROFILE_ATTRIBUTES]:
-            if attribute not in profile:
-                profile[attribute] = ""
-                if(attribute.endswith("_count")):
-                    profile[attribute] = UserInfo.getNumber(profile[attribute])
+        newProfile = {}
 
-        return profile
+        for attribute in self.config[ConfigKeys.SNS][ConfigKeys.PROFILE_ATTRIBUTES]:
+            if attribute in profile:
+                if(attribute.endswith("_count")):
+                    newProfile[attribute] = UserInfo.getNumber(str(profile[attribute]))
+                else:
+                    newProfile[attribute] = profile[attribute]
+            else:
+                newProfile[attribute] = ""
+
+        return newProfile
 
     def collectProfile(self):
-        self.logger.info("Collecting profiles for level %s" % (self.level))
+        self.logger.info("Collecting profiles for level <%s>" % (self.level))
 
         # Iterate over: requests number * request size (for this ip)
         # One HTTP connection per each request
@@ -164,13 +183,14 @@ class SubMasterThread (threading.Thread):
                 profiles = json.loads(data)
                 for profile in profiles:
                     pprofile = self.processJSONProfile(profile)
-                    self.logger.info("RESPONSE RECEIVED: %s" % pprofile)
+                    self.logger.info("PROFILE PARSED: %s" % pprofile)
+
                     if(pprofile["friends_count"] <= self.config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE] and\
                         pprofile["followers_count"] <= self.config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE]):
                         self.db.insertNode(pprofile, self.ip)
                         self.db.updateBFSQ(pprofile)
                     else:
-                        self.logger.info("Profile %s exceeded degree limit: %s,%s" %\
+                        self.logger.info("Profile <%s> exceeded degree limit: %s,%s" %\
                             (pprofile[MongoDB.TWITTER_SNAME_ID_KEY],
                                 pprofile["friends_count"],
                                 pprofile["followers_count"]))
@@ -187,7 +207,8 @@ class SubMasterThread (threading.Thread):
             self.collectProfile()
 
         elif(self.type == ConfigKeys.IN_EDGES_KEY):
-            result = self.collectEdges("user_id=" + self.node[MongoDB.TWITTER_ID_KEY],
+            result = self.collectEdges("api-client",
+                "user_id=" + self.node[MongoDB.TWITTER_ID_KEY],
                 MongoDB.TWITTER_ID_KEY)
 
             if(result):
@@ -195,7 +216,8 @@ class SubMasterThread (threading.Thread):
                 self.db.deque4FollowingBFSQ(self.node[MongoDB.TWITTER_ID_KEY])
 
         elif(self.type == ConfigKeys.OUT_EDGES_KEY):
-            result = self.collectEdges("screen_name=" + self.node[MongoDB.TWITTER_SNAME_ID_KEY],
+            result = self.collectEdges("website-crawler",
+                "screen_name=" + self.node[MongoDB.TWITTER_SNAME_ID_KEY],
                 MongoDB.TWITTER_SNAME_ID_KEY)
 
             if(result):

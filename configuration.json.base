@@ -1,7 +1,7 @@
 {
   "SNS": {
     "egoId": "fsm2016wsf",
-    "invalidIds": ["josecarlosgt05", "4569200370"],
+    "invalidIds": ["josecarlosgt05","4569200370"],
     "cursorCount": -1,
     "maxDegree": 75000,
     "profileAttributes": ["id_str",
@@ -26,7 +26,7 @@
   },
   "Multithreading": {
     "threadsPoolSize": 100,
-    "threadsIntervalTime": 1,
+    "threadsIntervalTime": 3,
     "windowTime": 15,
     "ProfilesWindowRequestsNumber": 60,
     "ProfilesRequestSize": 100,

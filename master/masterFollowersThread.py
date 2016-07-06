@@ -1,11 +1,13 @@
 import copy
 import threading
+import time
 
 from database.mongoDB import MongoDB
 from logger import Logger
-from submMasterThread import SubMasterThread
+from configKeys import ConfigKeys
+from subMasterThread import SubMasterThread
 
-class MasterFollowersThread:
+class MasterFollowersThread(threading.Thread):
     # Constants
     CLASS_NAME="MasterFollowersThread"
 
@@ -22,7 +24,7 @@ class MasterFollowersThread:
         self.config = config
 
     def start(self):
-        self.logger.info("CREATING THREADS for level %i" %\
+        self.logger.info("CREATING THREADS for level <%i>" %\
             self.level)
 
         # Retrieve nodes from previous level
@@ -34,7 +36,7 @@ class MasterFollowersThread:
         if(nodesCount > 0):
             hasMoreNodes = True
         else:
-            self.logger.info("BFSQ is empty at level %i" %\
+            self.logger.info("BFSQ is empty at level <%i>" %\
                 self.level)
         ipsPool = copy.copy(self.config[ConfigKeys.MULTITHREADING][ConfigKeys.IPS_POOL])
         while(hasMoreNodes):
@@ -61,27 +63,27 @@ class MasterFollowersThread:
                     thread.start()
 
                 except StopIteration:
-                    self.logger.info("ALL NODES %i IN BFSQ RETRIEVED (level %i)" %\
+                    self.logger.info("ALL NODES <%i> IN BFSQ RETRIEVED (level %i)" %\
                         (nodesCount, self.level))
-                        hasMoreNodes = False
-                        ipsCount = -2
+                    hasMoreNodes = False
+                    ipsCount = -2
 
                 ipsCount += 1
 
             # Wait until all threads finish to continue with next level
-            self.logger.info("WAITING FOR %ith POOL OF %i THREADS (level %i)" %\
+            self.logger.info("WAITING FOR <%ith> POOL OF <%i> THREADS (level %i)" %\
                 (i, len(threads), self.level))
             for t in threads: t.join()
 
-            self.logger.info("ALL %ith POOL OF %i THREADS FINISHED (level %i)" %\
+            self.logger.info("ALL <%ith> POOL OF <%i> THREADS FINISHED (level %i)" %\
                 (i, len(threads), self.level))
             i = i + 1
             threads = []
 
-            if(hasMoreNodes):
-                self.logger.info("Sleeping for %s min." %\
+            if(hasMoreNodes and nodes.alive):
+                self.logger.info("Sleeping for <%s> min." %\
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME])
                 time.sleep(
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME] * 60)
 
-        self.logger.info("LEVEL %i COMPLETED" % self.level)
+        self.logger.info("LEVEL <%i> COMPLETED" % self.level)

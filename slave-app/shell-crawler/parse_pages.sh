@@ -53,7 +53,7 @@ resp0=$($CURL_SCRIPT $CURRENT_SNAME $CONN main)
 sleep $SLEEP_TIME # Allow some sime to avoid hacker-like behaviour
 
 # Connections section
-echo "["
+echo -n "["
 
 # Extract screen names
 
@@ -61,15 +61,15 @@ snames0=""
 for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9_]+"'); do
 	sname=`echo $unpar_name | grep -oE '"[a-zA-Z0-9_]+"' | grep -oE '[a-zA-Z0-9_]+'`
 	if [ -n "$snames0" ]; then
-		snames0="$snames0,\n$sname"
+		snames0="$snames0,\"$sname\""
 	else
-		snames0=$sname
+		snames0="\"$sname\""
 	fi
 done
 echo "($ID) INITIAL SCREEN NAMES: $snames0" >> $LOG
 
 # Append initial screen names
-echo -e $snames0
+echo -n $snames0
 
 # Extract pagination offset (min position to be max position in the next call, if has more connections)
 
@@ -121,15 +121,15 @@ if [ $failedAttempt -eq 0 ]; then
 	for unpar_name in `echo $resp | grep -oE 'screen-name=\\\\"[a-zA-Z0-9_]+\\\\"'`; do
 		sname=`echo $unpar_name | grep -oE '\\\\"[a-zA-Z0-9_]+\\\\"' | grep -oE '[a-zA-Z0-9_]+'`
 		if [ -n "$snames1" ]; then
-			snames1="$snames1,\n$sname"
+			snames1="$snames1,\"$sname\""
 		else
-			snames1=$sname
+			snames1="\"$sname\""
 		fi
 	done
 	echo "($ID) SCREEN NAMES: $snames1" >> $LOG
 
 	# Append initial screen names
-	echo -e $snames1
+	echo -n $snames1
 
 	# Has more connections?
 
@@ -158,7 +158,7 @@ else
 fi
 done
 
-echo "]"
+echo -n "]"
 
 # rm -f $LOG
 # echo "REST FOR A WHILE UNTIL NEXT CRAWLING ..." >> $LOG

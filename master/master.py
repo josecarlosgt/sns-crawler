@@ -61,16 +61,16 @@ class Master:
                 self.db,
                 self.config
         )
-        '''
+
         threadFollowers = MasterFollowersThread(
             level,
             Logger.clone(
                 self.logger, MasterFollowersThread.CLASS_NAME),
                 self.db,
                 self.config)
-        '''
+
         #threadFollowing.start()
-        threadFollowers.start()
+        #threadFollowers.start()
 
         #threadFollowing.join()
         threadFollowers.join()

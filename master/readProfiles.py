@@ -21,19 +21,19 @@ class ReadProfiles:
         self.config = config
 
     def start(self):
-        self.logger.info("CREATING THREADS for level %i" %\
+        self.logger.info("CREATING THREADS for level <%i>" %\
             self.level)
 
         # Retrieve nodes from current level
         nodes = self.db.retrieveBFSQ(self.level - 1,
-            self.config[ConfigKeys.BFS][ConfigKeys.LEVEL_SIZE])
+            self.config[ConfigKeys.BFS][ConfigKeys.LEVEL_SIZE], False)
         threads = []
         hasMoreNodes = False
         nodesCount = nodes.count()
         if(nodesCount > 0):
             hasMoreNodes = True
         else:
-            self.logger.info("BFSQ is empty at level %i" %\
+            self.logger.info("BFSQ is empty at level <%i>" %\
                 self.level)
         ipsPool = copy.copy(self.config[ConfigKeys.MULTITHREADING][ConfigKeys.IPS_POOL])
         while(hasMoreNodes):
@@ -57,7 +57,7 @@ class ReadProfiles:
                             node = nodes.next()
                             nodesA.append(node)
                         except StopIteration:
-                            self.logger.info("ALL NODES %i IN BFSQ RETRIEVED (level %i)" %\
+                            self.logger.info("ALL NODES <%i> IN BFSQ RETRIEVED (level %i)" %\
                                 (nodesCount, self.level))
                             hasMoreNodes = False
                             profCount = -2
@@ -82,19 +82,19 @@ class ReadProfiles:
                 ipsCount += 1
 
             # Wait until all threads finish to continue with next level
-            self.logger.info("WAITING FOR %ith POOL OF %i THREADS (level %i)" %\
+            self.logger.info("WAITING FOR <%ith> POOL OF <%i> THREADS (level %i)" %\
                 (i, len(threads), self.level))
             for t in threads: t.join()
 
-            self.logger.info("ALL %ith POOL OF %i THREADS FINISHED (level %i)" %\
+            self.logger.info("ALL <%ith> POOL OF <%i> THREADS FINISHED (level %i)" %\
                 (i, len(threads), self.level))
             i = i + 1
             threads = []
 
-            if(hasMoreNodes):
-                self.logger.info("READING PROFILES: Sleeping for %s min." %\
+            if(hasMoreNodes and nodes.alive):
+                self.logger.info("Sleeping for <%s> min." %\
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME])
                 time.sleep(
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME] * 60)
 
-        self.logger.info("READING PROFILES: LEVEL %i COMPLETED" % self.level)
+        self.logger.info("LEVEL <%i> COMPLETED" % self.level)

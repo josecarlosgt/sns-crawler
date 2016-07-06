@@ -2,5 +2,5 @@
 
 # Initialize slave
 
-cd ~/research/sns-crawler/slave
-nohup node ./server.js &
+cd ~/research/sns-crawler/slave-app
+nohup npm start &

@@ -21,7 +21,9 @@ class MongoDB:
 
     # Breadth first search queue operations
 
-    def retrieveBFSQ_0(self, options, limit):
+    def retrieveBFSQ_0(self, options, limit, hasProfile):
+        options.update({"hasProfile": hasProfile})
+
         queue = self.db.BFSQ
 
         if(limit > 0):
@@ -29,33 +31,36 @@ class MongoDB:
         else:
             return queue.find(options, no_cursor_timeout=True)
 
-    def retrieveBFSQ(self, level, limit):
+    def retrieveBFSQ(self, level, limit, hasProfile):
         options = {"level": level}
 
-        return self.retrieveBFSQ_0(options, limit)
+        return self.retrieveBFSQ_0(options, limit, hasProfile)
 
     def retrieve4FollowersBFSQ(self, level, limit):
         options = {"level": level, "followersVisited": False}
 
-        return self.retrieveBFSQ_0(options, limit)
+        return self.retrieveBFSQ_0(options, limit, True)
 
     def retrieve4FollowingBFSQ(self, level, limit):
         options = {"level": level, "followingVisited": False}
 
-        return self.retrieveBFSQ_0(options, limit)
+        return self.retrieveBFSQ_0(options, limit, True)
 
     def enqueBFSQ(self, nodeData, level):
         queue = self.db.BFSQ
         try:
             node = { "level": level,
                 "followersVisited": False,
-                "followingVisited": False }
+                "followingVisited": False,
+                "hasProfile": False }
             node.update(nodeData)
             queue.insert_one(node)
-            self.logger.info("Node %s added in BSF queue level %i" % (node, level))
+            self.logger.info("Node added in BSF queue level <%i>: %s" %\
+                (level, node))
 
         except DuplicateKeyError:
-            self.logger.info("Node %s already exists in BSF queue level %i" % (node, level))
+            self.logger.info("Node already exists in BSF queue level <%i>: %s" %\
+                (level, node))
 
             return False
 
@@ -66,14 +71,17 @@ class MongoDB:
 
         queue.update_one({ self.TWITTER_ID_KEY: profile["id_str"] },
             { "$set": {
-                self.TWITTER_SNAME_ID_KEY: profile["screen_name"]
+                self.TWITTER_SNAME_ID_KEY: profile["screen_name"],
+                "hasProfile": True
             }})
         queue.update_one({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] },
             { "$set": {
-                self.TWITTER_ID_KEY: profile["id_str"]
+                self.TWITTER_ID_KEY: profile["id_str"],
+                "hasProfile": True
             }})
 
-        self.logger.info("Node updated in BSF queue: %s" % (profile))
+        self.logger.info("Node updated in BSF queue: %s / %s" %\
+            (profile["id_str"], profile["screen_name"]))
 
         return True
 
@@ -82,7 +90,7 @@ class MongoDB:
 
         queue.update_one({ self.TWITTER_ID_KEY: id },
             { "$set": {visitedType: True} })
-        self.logger.info("Node %s checked as visited in BSF queue" % id)
+        self.logger.info("Node <%s> checked as visited in BSF queue" % id)
 
         return True
 
