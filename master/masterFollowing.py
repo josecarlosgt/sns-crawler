@@ -1,5 +1,4 @@
 import copy
-import threading
 import time
 
 from database.mongoDB import MongoDB
@@ -7,16 +6,14 @@ from logger import Logger
 from configKeys import ConfigKeys
 from subMasterThread import SubMasterThread
 
-class MasterFollowingThread(threading.Thread):
+class MasterFollowing():
     # Constants
-    CLASS_NAME="MasterFollowingThread"
+    CLASS_NAME="MasterFollowing"
 
     def __init__(self,
         level,
         logger, db,
         config):
-
-        threading.Thread.__init__(self)
 
         self.level = level
         self.logger = logger
