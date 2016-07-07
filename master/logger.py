@@ -15,7 +15,7 @@ class Logger:
         self.timeId = timeId
 
     def buildMessage(self, message):
-        return "%s %s> %s" % (self.name, self.timeId, message)
+        return "%s-%s> %s" % (self.name, self.timeId, message)
 
     def error(self, message):
         logLine = self.buildMessage(message)

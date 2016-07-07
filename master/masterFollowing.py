@@ -1,10 +1,14 @@
+import threading
+import httplib
+import socket
+from httplib import HTTPException
 import copy
 import time
 
 from database.mongoDB import MongoDB
 from logger import Logger
 from configKeys import ConfigKeys
-from subMasterThread import SubMasterThread
+from processor import Processor
 
 class MasterFollowing():
     # Constants
@@ -43,12 +47,11 @@ class MasterFollowing():
                     node = nodes.next()
                     ip = ipsPool.pop(0)
                     ipsPool.append(ip)
-                    thread = SubMasterThread(
-                        ConfigKeys.OUT_EDGES_KEY,
+                    thread = FollowingThread(
                         node,
                         self.level,
                         Logger.clone(
-                            self.logger, SubMasterThread.CLASS_NAME + "-FOLLOWING-" + ip),
+                            self.logger, FollowingThread.CLASS_NAME + "-" + ip),
                         self.db,
                         ip,
                         self.config
@@ -73,3 +76,60 @@ class MasterFollowing():
             threads = []
 
         self.logger.info("LEVEL <%i> COMPLETED" % self.level)
+
+class FollowingThread(threading.Thread):
+    # Constants
+    CLASS_NAME="FollowingThread"
+
+    def __init__(self,
+        node, level,
+        logger, db, ip,
+        config):
+
+        threading.Thread.__init__(self)
+
+        self.node = node
+        self.level = level
+        self.logger = logger
+        self.db = db
+        self.ip = ip
+        self.config = config
+
+    def run(self):
+        result = self.collect()
+
+    def collect(self):
+        self.logger.info("Collecting following edges for node: %s" % (self.node))
+
+        data=""
+        try:
+            conn = httplib.HTTPConnection(self.ip)
+            url = "/website-crawler/following?&cursor_count=%s&screen_name=%s" %\
+                (self.config[ConfigKeys.SNS][ConfigKeys.CURSOR_COUNT],
+                self.node[MongoDB.TWITTER_SNAME_ID_KEY])
+
+            self.logger.info("Connecting to: %s%s" % (self.ip, url))
+            conn.request("GET", url)
+            r = conn.getresponse()
+            data = r.read()
+            conn.close()
+        except socket.error:
+            self.logger.\
+                error("Socket error when collecting edges for node: %s" %\
+                    self.node)
+            return False
+        except HTTPException:
+            self.logger.\
+                error("HTTP error when collecting edges for node: %s" %\
+                    self.node)
+            return False
+
+        edges = set([sname.strip() \
+                for sname in data.split(",") if len(sname.strip()) > 0])
+
+        Processor.processEdges(self.config,
+            self.logger, self.db,
+            self.node, self.level,
+            ConfigKeys.OUT_EDGES_KEY, edges, MongoDB.TWITTER_SNAME_ID_KEY)
+
+        return True

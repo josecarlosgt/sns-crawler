@@ -36,6 +36,7 @@ class MongoDB:
 
         return self.retrieveBFSQ_0(options, limit, hasProfile)
 
+    # ORDER BY: Followers count descending
     def retrieve4FollowersBFSQ(self, level, limit):
         options = {"level": level, "followersVisited": False}
 
@@ -69,19 +70,28 @@ class MongoDB:
     def updateBFSQ(self, profile):
         queue = self.db.BFSQ
 
-        queue.update_one({ self.TWITTER_ID_KEY: profile["id_str"] },
-            { "$set": {
-                self.TWITTER_SNAME_ID_KEY: profile["screen_name"],
-                "hasProfile": True
-            }})
-        queue.update_one({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] },
-            { "$set": {
-                self.TWITTER_ID_KEY: profile["id_str"],
-                "hasProfile": True
-            }})
+        if profile["protected"] == True:
+            queue.remove({ self.TWITTER_ID_KEY: profile["id_str"] })
+            queue.remove({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] })
+            self.logger.info("Protected node removed from BSF queue: %s / %s" %\
+                (profile["id_str"], profile["screen_name"]))
 
-        self.logger.info("Node updated in BSF queue: %s / %s" %\
-            (profile["id_str"], profile["screen_name"]))
+        else:
+            queue.update_one({ self.TWITTER_ID_KEY: profile["id_str"] },
+                { "$set": {
+                    self.TWITTER_SNAME_ID_KEY: profile["screen_name"],
+                    "hasProfile": True,
+                    "cursor": -1
+                }})
+            queue.update_one({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] },
+                { "$set": {
+                    self.TWITTER_ID_KEY: profile["id_str"],
+                    "hasProfile": True,
+                    "cursor": -1
+                }})
+
+            self.logger.info("Node updated in BSF queue: %s / %s" %\
+                (profile["id_str"], profile["screen_name"]))
 
         return True
 

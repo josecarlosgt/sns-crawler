@@ -52,19 +52,16 @@ snames=""
 resp0=$($CURL_SCRIPT $CURRENT_SNAME $CONN main)
 sleep $SLEEP_TIME # Allow some sime to avoid hacker-like behaviour
 
-# Connections section
-echo -n "["
-
 # Extract screen names
 
 snames0=""
 for unpar_name in $(echo $resp0 | grep -oE 'data-screen-name="[a-zA-Z0-9_]+"'); do
 	sname=`echo $unpar_name | grep -oE '"[a-zA-Z0-9_]+"' | grep -oE '[a-zA-Z0-9_]+'`
-	if [ -n "$snames0" ]; then
-		snames0="$snames0,\"$sname\""
-	else
-		snames0="\"$sname\""
-	fi
+	#if [ -n "$snames0" ]; then
+	snames0="$snames0,$sname"
+	#else
+	#	snames0="$sname"
+	#fi
 done
 echo "($ID) INITIAL SCREEN NAMES: $snames0" >> $LOG
 
@@ -120,11 +117,11 @@ if [ $failedAttempt -eq 0 ]; then
 	snames1=""
 	for unpar_name in `echo $resp | grep -oE 'screen-name=\\\\"[a-zA-Z0-9_]+\\\\"'`; do
 		sname=`echo $unpar_name | grep -oE '\\\\"[a-zA-Z0-9_]+\\\\"' | grep -oE '[a-zA-Z0-9_]+'`
-		if [ -n "$snames1" ]; then
-			snames1="$snames1,\"$sname\""
-		else
-			snames1="\"$sname\""
-		fi
+		#if [ -n "$snames1" ]; then
+		snames1="$snames1,$sname"
+		#else
+		#	snames1="$sname"
+		#fi
 	done
 	echo "($ID) SCREEN NAMES: $snames1" >> $LOG
 
@@ -157,8 +154,6 @@ else
 	next=0
 fi
 done
-
-echo -n "]"
 
 # rm -f $LOG
 # echo "REST FOR A WHILE UNTIL NEXT CRAWLING ..." >> $LOG

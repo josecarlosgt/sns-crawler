@@ -1,6 +1,5 @@
 class ConfigKeys:
     # Constants
-    PROFILE_KEY="profile"
     OUT_EDGES_KEY="following"
     IN_EDGES_KEY="followers"
 
@@ -27,3 +26,4 @@ class ConfigKeys:
     FOLLOWERS_REQUEST_SIZE = "FollowersRequestSize"
 
     APP_LABELS= "TwitterApplicationsLabels"
+    APP_LABELS_MAP= "TwitterApplicationsLabelsMap"    

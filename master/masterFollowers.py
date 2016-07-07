@@ -1,10 +1,13 @@
 import copy
 import time
+from requests_oauthlib import OAuth1
+import requests
+import json
 
 from database.mongoDB import MongoDB
 from logger import Logger
 from configKeys import ConfigKeys
-from subMasterThread import SubMasterThread
+from processor import Processor
 
 class MasterFollowers():
     # Constants
@@ -27,60 +30,117 @@ class MasterFollowers():
         # Retrieve nodes from previous level
         nodes = self.db.retrieve4FollowersBFSQ(self.level - 1,
             self.config[ConfigKeys.BFS][ConfigKeys.LEVEL_SIZE])
-        threads = []
-        hasMoreNodes = False
         nodesCount = nodes.count()
-        if(nodesCount > 0):
-            hasMoreNodes = True
-        else:
+        if(nodesCount == 0):
             self.logger.info("BFSQ is empty at level <%i>" %\
                 self.level)
-        ipsPool = copy.copy(self.config[ConfigKeys.MULTITHREADING][ConfigKeys.IPS_POOL])
-        while(hasMoreNodes):
-            i = 1
-            # Create a thread per available ip: One thread for each node
-            ipsCount = 0
-            while ipsCount >= 0 and ipsCount < len(ipsPool):
-                ip = ipsPool.pop(0)
-                ipsPool.append(ip)
 
-                try:
-                    node = nodes.next()
-                    thread = SubMasterThread(
-                        ConfigKeys.IN_EDGES_KEY,
-                        node,
-                        self.level,
+        node = None
+        cursor = -1
+        while(nodes.alive):
+            if node is None:
+                node = nodes.next()
+            appsPool = copy.copy(self.config[ConfigKeys.APP_LABELS].values())
+
+            while len(appsPool) > 0:
+                app = appsPool.pop(0)
+                reqRemaining = self.config[ConfigKeys.MULTITHREADING]\
+                    [ConfigKeys.FOLLOWERS_WINDOW_REQUESTS_NUMBER]
+
+                while(reqRemaining > 0):
+                    reqRemaining, cursor = FollowersCollector(
+                        node, self.level,
+                        app, cursor,
                         Logger.clone(
-                            self.logger, SubMasterThread.CLASS_NAME + "-FOLLOWERS-" + ip),
-                        self.db,
-                        ip,
-                        self.config
-                    )
-                    threads.append(thread)
-                    thread.start()
+                            self.logger, FollowersCollector.CLASS_NAME),
+                        self.db, self.config
+                    ).start()
 
-                except StopIteration:
-                    self.logger.info("ALL NODES <%i> IN BFSQ RETRIEVED (level %i)" %\
-                        (nodesCount, self.level))
-                    hasMoreNodes = False
-                    ipsCount = -2
+                    if cursor == 0:
+                        cursor = -1
+                        try:
+                            node = nodes.next()
+                        except StopIteration:
+                            self.logger.info("ALL NODES IN BFSQ RETRIEVED (level %i)" %\
+                                (self.level))
+                            reqRemaining = 0
+                            appsPool = []
 
-                ipsCount += 1
-
-            # Wait until all threads finish to continue with next level
-            self.logger.info("WAITING FOR <%ith> POOL OF <%i> THREADS (level %i)" %\
-                (i, len(threads), self.level))
-            for t in threads: t.join()
-
-            self.logger.info("ALL <%ith> POOL OF <%i> THREADS FINISHED (level %i)" %\
-                (i, len(threads), self.level))
-            i = i + 1
-            threads = []
-
-            if(hasMoreNodes and nodes.alive):
+            if(nodes.alive):
                 self.logger.info("Sleeping for <%s> min." %\
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME])
                 time.sleep(
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME] * 60)
 
         self.logger.info("LEVEL <%i> COMPLETED" % self.level)
+
+class FollowersCollector():
+    # Constants
+    CLASS_NAME="FollowersCollector"
+    BASE_URL="https://api.twitter.com/1.1"
+
+    def __init__(self,
+        node, level,
+        app, cursor,
+        logger, db, config):
+
+        self.node = node
+        self.level = level
+        self.app = app
+        self.cursor = cursor
+        self.logger = logger
+        self.db = db
+        self.config = config
+
+    def start(self):
+        self.logger.info("Collecting followers for node: %s" % (self.node))
+
+        oauth = OAuth1(self.app["consumerKey"],
+            self.app["consumerSecret"],
+            self.app["accessToken"],
+            self.app["accessTokenSecret"])
+
+        url="%s/followers/ids.json?stringify_ids=true&user_id=%s&count=%s&cursor=%s" %\
+            (self.BASE_URL,
+            self.node[MongoDB.TWITTER_ID_KEY],
+            self.config[ConfigKeys.MULTITHREADING][ConfigKeys.FOLLOWERS_REQUEST_SIZE],
+            self.cursor)
+        self.logger.info("Connecting to: %s" % (url))
+
+        limitRemaining = 0
+        nextCursor = self.cursor
+        error = False
+
+        limitRemaining = 0
+        resp = requests.get(url, auth=oauth)
+        if 'x-rate-limit-remaining' in resp.headers:
+            limitRemaining = resp.headers['x-rate-limit-remaining']
+        else:
+            self.logger.info("INVALID RESPONSE: for node %s: %s" %\
+                (self.node, resp))
+            return (0, 0)
+
+        data = resp.content.decode('utf-8')
+        dataO = {}
+        try:
+            dataO = json.loads(data)
+        except ValueError:
+            self.logger.info("JSON NOT FOUND: for node %s: %s" %\
+                (self.node, data))
+            return (0, self.cursor)
+
+        if "ids" in dataO:
+            edges = dataO["ids"]
+            nextCursor = dataO["next_cursor"]
+
+            Processor.processEdges(self.config,
+                self.logger, self.db,
+                self.node, self.level,
+                ConfigKeys.IN_EDGES_KEY, edges, MongoDB.TWITTER_ID_KEY)
+
+            return (limitRemaining, nextCursor)
+
+        else:
+            self.logger.info("IDS NOT FOUND: for node %s: %s" %\
+                (self.node, dataO))
+            return (0, self.cursor)

@@ -38,8 +38,12 @@ class Master:
         self.logger.info("Checking configuration")
         for section, sValue in config.iteritems():
             self.logger.info(section)
-            for option, value in sValue.iteritems():
-                self.logger.info("\t %s: %s" % (option, value))
+            if(isinstance(sValue, dict)):
+                for option, value in sValue.iteritems():
+                    self.logger.info("\t %s: %s" % (option, value))
+            else:
+                for value in sValue:
+                    self.logger.info("\t %s" % (value))
 
         self.mainDB = MongoDB(self.timeId,
             Logger.clone(self.logger, MongoDB.CLASS_NAME))

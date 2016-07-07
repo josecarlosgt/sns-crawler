@@ -25,14 +25,6 @@ TwitterAPIClient.prototype.test = function () {
   return msg;
 }
 
-TwitterAPIClient.prototype.getFollowers = function (userId, count, cursor, success, error) {
-  var path = '/followers/ids.json?stringify_ids=true&user_id=' + userId +
-    '&count=' + count +
-    '&cursor=' + cursor;
-  var url = this.baseUrl + path;
-  this.doRequest(url, success, error);
-};
-
 TwitterAPIClient.prototype.getProfiles = function (snames, ids, success, error) {
   var path = "/users/lookup.json?screen_name=" + snames + "&user_id=" + ids;
   var url = this.baseUrl + path;

@@ -1,10 +1,15 @@
+import threading
+import httplib
+import socket
+from httplib import HTTPException
 import copy
 import time
+import json
 
 from logger import Logger
 from database.mongoDB import MongoDB
 from configKeys import ConfigKeys
-from subMasterThread import SubMasterThread
+from processor import Processor
 
 class ReadProfiles:
     # Constants
@@ -67,12 +72,11 @@ class ReadProfiles:
                         profCount += 1
                     reqCount += 1
 
-                thread = SubMasterThread(
-                    ConfigKeys.PROFILE_KEY,
+                thread = ProfilesThread(
                     nodesA,
                     self.level,
                     Logger.clone(
-                        self.logger, SubMasterThread.CLASS_NAME + "-PROFILES-" + ip),
+                        self.logger, ProfilesThread.CLASS_NAME + "-" + ip),
                     self.db,
                     ip,
                     self.config
@@ -98,3 +102,95 @@ class ReadProfiles:
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME] * 60)
 
         self.logger.info("LEVEL <%i> COMPLETED" % self.level)
+
+class ProfilesThread(threading.Thread):
+    # Constants
+    CLASS_NAME="ProfilesThread"
+
+    def __init__(self,
+        node, level,
+        logger, db, ip,
+        config):
+
+        threading.Thread.__init__(self)
+
+        self.node = node
+        self.level = level
+        self.logger = logger
+        self.db = db
+        self.ip = ip
+        self.config = config
+
+    def run(self):
+        result = self.collect()
+
+    def collect(self):
+        self.logger.info("Collecting profiles for level <%s>" % (self.level))
+
+        # Iterate over: requests number * request size (for this ip)
+        # One HTTP connection per each request
+        reqCount = 0
+        while reqCount >= 0 and\
+            reqCount < self.config[ConfigKeys.MULTITHREADING][ConfigKeys.PROFILES_WINDOW_REQUESTS_NUMBER]:
+            nodesIds = []
+            nodesSNs = []
+            profCount = 0
+            while profCount >= 0 and\
+                profCount < self.config[ConfigKeys.MULTITHREADING][ConfigKeys.PROFILES_REQUEST_SIZE]:
+                    if(len(self.node) > 0):
+                        node = self.node.pop()
+                        if(MongoDB.TWITTER_ID_KEY in node):
+                            nodesIds.append(node[MongoDB.TWITTER_ID_KEY])
+                        elif(MongoDB.TWITTER_SNAME_ID_KEY in node):
+                            nodesSNs.append(node[MongoDB.TWITTER_SNAME_ID_KEY])
+
+                    else:
+                        profCount = -2
+                        reqCount = -2
+
+                    profCount += 1
+
+            data=""
+            try:
+                conn = httplib.HTTPConnection(self.ip)
+                nodesIdsStr = ','.join([str(n) for n in nodesIds])
+                nodesSNsStr = ','.join([str(n) for n in nodesSNs])
+                appLabel = self.config[ConfigKeys.APP_LABELS_MAP][self.ip]
+                url = "/api-client/profiles?app_label=%s&ids=%s&snames=%s" %\
+                    (appLabel, nodesIdsStr, nodesSNsStr)
+                self.logger.info("Connecting to: %s%s" % (self.ip, url))
+                conn.request("GET", url)
+                r = conn.getresponse()
+                data = r.read()
+                conn.close()
+            except socket.error:
+                self.logger.\
+                    error("Socket error when collecting profiles")
+                return False
+            except HTTPException:
+                self.logger.\
+                    error("HTTP error when collecting profiles")
+                return False
+
+            try:
+                profiles = json.loads(data)
+                for profile in profiles:
+                    pprofile = Processor.processJSONProfile(self.config, profile)
+                    self.logger.info("PROFILE PARSED: %s" % pprofile)
+
+                    if(pprofile["friends_count"] <= self.config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE] and\
+                        pprofile["followers_count"] <= self.config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE]):
+                        self.db.insertNode(pprofile, self.ip)
+                        self.db.updateBFSQ(pprofile)
+                    else:
+                        self.logger.info("Profile <%s> exceeded degree limit: %s,%s" %\
+                            (pprofile[MongoDB.TWITTER_SNAME_ID_KEY],
+                                pprofile["friends_count"],
+                                pprofile["followers_count"]))
+            except ValueError:
+                self.logger.\
+                    error("Not valid JSON response received: **%s**" % data)
+
+            reqCount += 1
+
+        return True
