@@ -75,21 +75,32 @@ class MongoDB:
         self.logger.info("Profile is deleted from BFSQ %s / %s, results: %s / %s" %\
             (profile["id_str"], profile["screen_name"], result1, result2))
 
-    def updateBFSQ(self, profile):
+    def updateBFSQ0(self, queryKey, queryValue, newKey, newValue):
         queue = self.db.BFSQ
 
-        result1 = queue.update_one({ self.TWITTER_ID_KEY: profile["id_str"] },
-            { "$set": {
-                self.TWITTER_SNAME_ID_KEY: profile["screen_name"],
-                "hasProfile": True,
-                "cursor": -1
+        try:
+            result = queue.update_one({ queryKey: queryValue },
+                { "$set": {
+                    newKey: newValue,
+                    "hasProfile": True
             }})
-        result2 = queue.update_one({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] },
-            { "$set": {
-                self.TWITTER_ID_KEY: profile["id_str"],
-                "hasProfile": True,
-                "cursor": -1
-            }})
+
+            return result
+        except DuplicateKeyError:
+            # A duplicate node exists (same user is a follower and a followee)
+            self.logger.info("DUPLICATE EXISTS in BFSQ: Query: %s / %s, Values: %s / %s" %\
+                (queryKey, queryValue, newKey, newValue))
+            queue.remove({ newKey: newValue })
+
+            return self.updateBFSQ0(queryKey, queryValue, newKey, newValue)
+
+    def updateBFSQ(self, profile):
+
+
+        result1 = self.updateBFSQ0(self.TWITTER_ID_KEY, profile["id_str"],
+            self.TWITTER_SNAME_ID_KEY, profile["screen_name"])
+        result2 = self.updateBFSQ0(self.TWITTER_SNAME_ID_KEY, profile["screen_name"],
+            self.TWITTER_ID_KEY,  profile["id_str"])
 
         self.logger.info("Node updated in BSF queue: %s / %s, results: %s / %s" %\
             (profile["id_str"], profile["screen_name"], result1, result2))
