@@ -58,40 +58,41 @@ class Processor():
     '''
 
     @staticmethod
-    def processJSONProfile(config, profile):
-        newProfile = {}
+    def processJSONProfile(config, db, logger, profile0):
+        profile = {}
 
         for attribute in config[ConfigKeys.SNS][ConfigKeys.PROFILE_ATTRIBUTES]:
-            if attribute in profile:
+            if attribute in profile0:
                 if(attribute.endswith("_count")):
-                    newProfile[attribute] = UserInfo.getNumber(str(profile[attribute]))
+                    profile[attribute] = UserInfo.getNumber(str(profile0[attribute]))
                 else:
-                    newProfile[attribute] = profile[attribute]
+                    profile[attribute] = profile0[attribute]
             else:
-                newProfile[attribute] = ""
+                profile[attribute] = ""
 
-        return newProfile
+        logger.info("PROFILE PARSED: %s" % profile)
 
-    '''
-    def run(self):
-        if(self.type == ConfigKeys.PROFILE_KEY):
-            self.collectProfile()
+        valid = True
+        if(profile["friends_count"] <= config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE] and\
+            profile["followers_count"] <= config[ConfigKeys.SNS][ConfigKeys.MAX_DEGREE]):
 
-        elif(self.type == ConfigKeys.IN_EDGES_KEY):
-            result = self.collectEdges("api-client",
-                "user_id=" + self.node[MongoDB.TWITTER_ID_KEY],
-                MongoDB.TWITTER_ID_KEY)
+            if profile["protected"] == False:
+                db.updateBFSQ(profile)
+            else:
+                logger.info("Profile is protected %s / %s" %\
+                    (profile["id_str"], profile["screen_name"]))
+                valid = False
 
-            if(result):
-                # Remove node from BFS queue
-                self.db.deque4FollowingBFSQ(self.node[MongoDB.TWITTER_ID_KEY])
+        else:
+            logger.info("Profile <%s> exceeded degree limit: %s,%s" %\
+                (pprofile[MongoDB.TWITTER_SNAME_ID_KEY],
+                    pprofile["friends_count"],
+                    pprofile["followers_count"]))
+            valid = False
 
-        elif(self.type == ConfigKeys.OUT_EDGES_KEY):
-            result = self.collectEdges("website-crawler",
-                "screen_name=" + self.node[MongoDB.TWITTER_SNAME_ID_KEY],
-                MongoDB.TWITTER_SNAME_ID_KEY)
+        # Insert node anyway to keep record of every element in the network
+        db.insertNode(profile)
 
-            if(result):
-                # Remove node from BFS queue
-                self.db.deque4FollowersBFSQ(self.node[MongoDB.TWITTER_ID_KEY])
-    '''
+        if not valid:
+            # Invalid profiles should not be analyzed later
+            db.removeBFSQ(profile)

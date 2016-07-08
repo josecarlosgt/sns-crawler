@@ -1,7 +1,6 @@
 var express = require('express');
 var fs = require('fs');
 
-var api_client = require('./api-client/routes');
 var website_crawler = require('./website-crawler/routes');
 
 var app = express();
@@ -19,7 +18,6 @@ app.get('/clear-log', function (req, res) {
   res.send("OK");
 });
 
-app.use('/api-client', api_client);
 app.use('/website-crawler', website_crawler);
 
 // catch 404 and forward to error handler

@@ -67,31 +67,32 @@ class MongoDB:
 
         return True
 
+    def removeBFSQ(self, profile):
+        queue = self.db.BFSQ
+
+        result1 = queue.remove({ self.TWITTER_ID_KEY: profile["id_str"] })
+        result2 = queue.remove({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] })
+        self.logger.info("Profile is deleted from BFSQ %s / %s, results: %s / %s" %\
+            (profile["id_str"], profile["screen_name"], result1, result2))
+
     def updateBFSQ(self, profile):
         queue = self.db.BFSQ
 
-        if profile["protected"] == True:
-            queue.remove({ self.TWITTER_ID_KEY: profile["id_str"] })
-            queue.remove({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] })
-            self.logger.info("Protected node removed from BSF queue: %s / %s" %\
-                (profile["id_str"], profile["screen_name"]))
+        result1 = queue.update_one({ self.TWITTER_ID_KEY: profile["id_str"] },
+            { "$set": {
+                self.TWITTER_SNAME_ID_KEY: profile["screen_name"],
+                "hasProfile": True,
+                "cursor": -1
+            }})
+        result2 = queue.update_one({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] },
+            { "$set": {
+                self.TWITTER_ID_KEY: profile["id_str"],
+                "hasProfile": True,
+                "cursor": -1
+            }})
 
-        else:
-            queue.update_one({ self.TWITTER_ID_KEY: profile["id_str"] },
-                { "$set": {
-                    self.TWITTER_SNAME_ID_KEY: profile["screen_name"],
-                    "hasProfile": True,
-                    "cursor": -1
-                }})
-            queue.update_one({ self.TWITTER_SNAME_ID_KEY: profile["screen_name"] },
-                { "$set": {
-                    self.TWITTER_ID_KEY: profile["id_str"],
-                    "hasProfile": True,
-                    "cursor": -1
-                }})
-
-            self.logger.info("Node updated in BSF queue: %s / %s" %\
-                (profile["id_str"], profile["screen_name"]))
+        self.logger.info("Node updated in BSF queue: %s / %s, results: %s / %s" %\
+            (profile["id_str"], profile["screen_name"], result1, result2))
 
         return True
 
@@ -153,7 +154,7 @@ class MongoDB:
 
     # Network operations
 
-    def insertNode(self, profile, ip):
+    def insertNode(self, profile):
         nodesCollection = self.db.nodes
         nodesValidatorCollection = self.db['nodes' + self.timeId]
         node = {
@@ -169,7 +170,6 @@ class MongoDB:
         nodeValidator = {
             self.TWITTER_ID_KEY: profile["id_str"],
             "timeId": self.timeId,
-            "collectorIP": ip,
 
             "statuses_count": profile["statuses_count"],
             "friends_count": profile["friends_count"],

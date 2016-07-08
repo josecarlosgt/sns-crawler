@@ -26,4 +26,3 @@ class ConfigKeys:
     FOLLOWERS_REQUEST_SIZE = "FollowersRequestSize"
 
     APP_LABELS= "TwitterApplicationsLabels"
-    APP_LABELS_MAP= "TwitterApplicationsLabelsMap"    

@@ -107,7 +107,7 @@ class Master:
                 p.remove({"_id": cID})
 
     	if not isParent:
-            print "CHILD PROCESS FINISHED"
+            self.logger.info("CHILD PROCESS FINISHED")
             os._exit(0)
     	else:
     		wait = True
@@ -115,10 +115,10 @@ class Master:
     			ps = p.find({})
     			wait = False if ps.count() == 0 else True
     			if wait:
-    				print "MAIN PROCESS WAITING (%i)" % ps.count()
+    				self.logger.info("MAIN PROCESS WAITING (%i)" % ps.count())
     				time.sleep(SLEEP)
 
-    		print "MAIN PROCESS RESUMED"
+    		self.logger.info("MAIN PROCESS RESUMED")
 
     def breadth_first_search(self, level):
         # Stage 1: Read profiles

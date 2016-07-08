@@ -27,6 +27,7 @@ class MasterFollowers():
         self.logger.info("CREATING THREADS for level <%i>" %\
             self.level)
 
+        hasMore = True
         # Retrieve nodes from previous level
         nodes = self.db.retrieve4FollowersBFSQ(self.level - 1,
             self.config[ConfigKeys.BFS][ConfigKeys.LEVEL_SIZE])
@@ -34,10 +35,11 @@ class MasterFollowers():
         if(nodesCount == 0):
             self.logger.info("BFSQ is empty at level <%i>" %\
                 self.level)
+            hasMore = False
 
         node = None
         cursor = -1
-        while(nodes.alive):
+        while hasMore :
             if node is None:
                 node = nodes.next()
             appsPool = copy.copy(self.config[ConfigKeys.APP_LABELS].values())
@@ -65,8 +67,11 @@ class MasterFollowers():
                                 (self.level))
                             reqRemaining = 0
                             appsPool = []
+                            hasMore = False
 
-            if(nodes.alive):
+                self.logger.info("LIMIT REACHED for this application (level %i)" % self.level)
+            self.logger.info("ALL APPLICATIONS USED (level %i)" % self.level)
+            if hasMore:
                 self.logger.info("Sleeping for <%s> min." %\
                     self.config[ConfigKeys.MULTITHREADING][ConfigKeys.WINDOW_TIME])
                 time.sleep(
@@ -107,16 +112,15 @@ class FollowersCollector():
             self.cursor)
         self.logger.info("Connecting to: %s" % (url))
 
-        limitRemaining = 0
-        nextCursor = self.cursor
-        error = False
+        resp = requests.get(url, auth=oauth)
+        self.logger.info("HEADERS RECEIVED for node %s: %s" % (self.node, resp.headers))
 
         limitRemaining = 0
-        resp = requests.get(url, auth=oauth)
+        nextCursor = self.cursor
         if 'x-rate-limit-remaining' in resp.headers:
-            limitRemaining = resp.headers['x-rate-limit-remaining']
+            limitRemaining = int(resp.headers['x-rate-limit-remaining'])
         else:
-            self.logger.info("INVALID RESPONSE: for node %s: %s" %\
+            self.logger.error("INVALID RESPONSE: for node %s: %s" %\
                 (self.node, resp))
             return (0, 0)
 
@@ -125,9 +129,9 @@ class FollowersCollector():
         try:
             dataO = json.loads(data)
         except ValueError:
-            self.logger.info("JSON NOT FOUND: for node %s: %s" %\
+            self.logger.error("INVALID RESPONSE: json not found for node %s: %s" %\
                 (self.node, data))
-            return (0, self.cursor)
+            return (0, 0)
 
         if "ids" in dataO:
             edges = dataO["ids"]
@@ -141,6 +145,7 @@ class FollowersCollector():
             return (limitRemaining, nextCursor)
 
         else:
-            self.logger.info("IDS NOT FOUND: for node %s: %s" %\
+            self.logger.info("IDS NOT FOUND (LIMIT MIGHT BE EXCEEDED): for node %s: %s" %\
                 (self.node, dataO))
-            return (0, self.cursor)
+
+            return (limitRemaining, self.cursor)

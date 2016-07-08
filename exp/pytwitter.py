@@ -9,17 +9,22 @@ accessTokenSecret = "S0OAVja67nx3xXVs5KSXJNfENpoWovqBUDG6wBXL874s4"
 
 oauth = OAuth1(consumerKey, consumerSecret, accessToken, accessTokenSecret)
 
-url="https://api.twitter.com/1.1/followers/ids.json?stringify_ids=true&user_id=3821978235"
-resp = requests.get(url, auth=oauth)
+# url="https://api.twitter.com/1.1/followers/ids.json?stringify_ids=true&user_id=3821978235"
+# resp = requests.get(url, auth=oauth)
+
+# data = resp.content.decode('utf-8')
+# print data
+
+url="https://api.twitter.com/1.1//users/lookup.json"
+resp = requests.post(url, auth=oauth, data ={'screen_name': 'xjosecarlosgt05'})
 print resp
 
-data = resp.content.decode('utf-8')
-print data
+respO = resp.json()
 
-dataO = json.loads(data)
-print dataO
+if(type(respO) is list):
+	print "PROFILES RECEIVED"
 
-#print "id: " + str(dataO[0]["id"])
+print respO
 
 print resp.headers
 
