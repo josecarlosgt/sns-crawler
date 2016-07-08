@@ -85,9 +85,9 @@ class Processor():
 
         else:
             logger.info("Profile <%s> exceeded degree limit: %s,%s" %\
-                (pprofile[MongoDB.TWITTER_SNAME_ID_KEY],
-                    pprofile["friends_count"],
-                    pprofile["followers_count"]))
+                (profile[MongoDB.TWITTER_SNAME_ID_KEY],
+                    profile["friends_count"],
+                    profile["followers_count"]))
             valid = False
 
         # Insert node anyway to keep record of every element in the network
