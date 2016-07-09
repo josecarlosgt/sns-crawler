@@ -18,11 +18,6 @@ class CheckDegrees:
             outEdgesP = str(node["friends_count"])
             outEdgesPI = 0
             inEdgesPI = 0
-            try:
-                outEdgesPI = int(outEdgesP.replace(',', ''))
-                inEdgesPI = int(inEdgesP.replace(',', ''))
-            except ValueError:
-                print "PARSE ERROR"
 
             inEdgesC = self.db[self.EDGES_COLLECTION].find(
                 {"targetId": node["twitterID"]}
@@ -36,6 +31,6 @@ class CheckDegrees:
                 print ("ALERT (parsed/crawled) for %s %s "
                     "Indegree (followers): %s/%s "
                     "Outdegree (following): %s/%s") %\
-                    (node["twitterID"], node["collectorIP"], \
-                        inEdgesP, inEdgesC,\
+                    (node["twitterID"],
+                        inEdgesP, inEdgesC,
                         outEdgesP, outEdgesC)
