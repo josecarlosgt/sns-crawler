@@ -32,7 +32,7 @@ class CheckDegrees:
             ).count()
 
             if( ((outEdgesPI != outEdgesC) or
-                (inEdgesPI != inEdgesC)) and not node["private"] ):
+                (inEdgesPI != inEdgesC)) and not node["protected"] ):
                 print ("ALERT (parsed/crawled) for %s %s "
                     "Indegree (followers): %s/%s "
                     "Outdegree (following): %s/%s") %\
