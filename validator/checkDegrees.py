@@ -28,7 +28,7 @@ class CheckDegrees:
 
             if( ((outEdgesPI != outEdgesC) or
                 (inEdgesPI != inEdgesC)) and not node["protected"] ):
-                print ("ALERT (parsed/crawled) for %s %s "
+                print ("ALERT (parsed/crawled) for %s"
                     "Indegree (followers): %s/%s "
                     "Outdegree (following): %s/%s") %\
                     (node["twitterID"],
