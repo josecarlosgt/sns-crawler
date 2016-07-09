@@ -1,5 +1,5 @@
 — CRAWLING LOG
 
 timeID:
-START: 
+START: ~ Jul 2016 16:20:17 NZST
 END:
