@@ -140,7 +140,7 @@ class ProfilesCollector():
             limitRemaining = int(resp.headers['x-rate-limit-remaining'])
         else:
             self.logger.error("INVALID RESPONSE: for node %s: %s" %\
-                (self.node, resp))
+                (self.batch, resp))
             return (0, True)
 
         dataO = {}
