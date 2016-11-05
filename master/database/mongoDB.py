@@ -8,6 +8,7 @@ class MongoDB:
     # Constants
     CLASS_NAME="MongoDB"
     DATABASE_NAME = "research_db"
+    REMOTE_DATABASE_NAME = "remote_research_db"
     TWITTER_SNAME_ID_KEY = "twitterSN"
     TWITTER_ID_KEY = "twitterID"
 
