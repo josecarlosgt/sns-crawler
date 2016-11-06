@@ -3,44 +3,69 @@ import pymongo
 from pymongo import MongoClient
 
 from master.database.mongoDB import MongoDB
-from parser.userInfo import UserInfo
+from profile_parser.userInfo import UserInfo
 
 class DegreeStats:
 
-    def __init__(self, TIME_ID):
+    def __init__(self, CONF, EGO_ID, TIMES, DIRECTION):
         client = MongoClient()
-        self.db = client[MongoDB.DATABASE_NAME]
-        self.NODES_COLLECTION = 'nodes' + TIME_ID
+        self.db = client[MongoDB.REMOTE_DATABASE_NAME]
+        self.CONF = CONF + "/" + "degreeStats-"
+        self.TIMES = TIMES
+        self.EGO_ID = EGO_ID
+        self.DIRECTION = DIRECTION
 
-    def percentileStat(self, degree, data, q):
-        print "{}th percentile for {}: {:,}".format(q, degree, round(numpy.percentile(data, q)))
+    def percentileStat(self, data, q):
+        print "{}th percentile for: {:,}".format(q, round(numpy.percentile(data, q)))
+
+    def generateStats(self, timeId, nodes, degrees):
+        if len(degrees) == 0:
+            print "Degree frequencies is emtpy."
+        else:
+            print "DEGREES DESCRIPTIVE STATISTICS %s %s \n" % (self.DIRECTION, timeId)
+            print "Mean: {:,}".format(round(numpy.mean(degrees), 2))
+            print ""
+            print "Standard Variation: {:,}".format(round(numpy.std(degrees), 2))
+            print ""
+            print "Variance: {:,}".format(round(numpy.var(degrees), 2))
+            print ""
+            print "Max: {:,}".format(numpy.amax(degrees))
+            print ""
+
+            for q in [60, 80, 90, 95, 96, 97, 98, 99]:
+                self.percentileStat(degrees, q)
+                print ""
+
+        output = self.CONF + timeId
+        fo = open(output, "w")
+        s_degrees = sorted(degrees)
+        for d in s_degrees:
+            fo.write("%s\n" % d);
+        fo.close()
 
     def run(self):
-        nodes = self.db[self.NODES_COLLECTION].find({})
-        inDegrees = []
-        outDegrees = []
-        for node in nodes:
-            try:
-                outDegrees.append(UserInfo.getNumber(node["following"]))
-                inDegrees.append(UserInfo.getNumber(node["followers"]))
-            except KeyError:
-                pass
+        for timeId in self.TIMES:
 
-        print "DEGREES DESCRIPTIVE STATISTICS\n"
-        print "Mean indegree: {:,}".format(round(numpy.mean(inDegrees), 2))
-        print "Mean outdegree: {:,}".format(round(numpy.mean(outDegrees), 2))
-        print ""
-        print "Standard Variation indegree: {:,}".format(round(numpy.std(inDegrees), 2))
-        print "Standard Variation outdegree: {:,}".format(round(numpy.std(outDegrees), 2))
-        print ""
-        print "Variance indegree: {:,}".format(round(numpy.var(inDegrees), 2))
-        print "Variance outdegree: {:,}".format(round(numpy.var(outDegrees), 2))
-        print ""
-        print "Max indegree: {:,}".format(numpy.amax(inDegrees))
-        print "Max outdegree: {:,}".format(numpy.amax(outDegrees))
-        print ""
+            inEdges = self.db['edges' + timeId].find(
+                {"targetId": self.EGO_ID}
+            )
+            inEdgesS = []
+            for edge in inEdges:
+                inEdgesS.append(edge["sourceId"])
 
-        for q in [60, 80, 90, 95, 96, 97, 98, 99]:
-            self.percentileStat("indegree", inDegrees, q)
-            self.percentileStat("outdegree", outDegrees, q)
-            print ""
+            if len(inEdgesS) > 0:
+                nodes = self.db['nodes' + timeId].find(
+                    {"twitterID":{"$in":inEdgesS}})
+                degrees = []
+                for node in nodes:
+                    try:
+                        if(self.DIRECTION == "inEdges"):
+                            degrees.append(node["followers_count"])
+                        else:
+                            degrees.append(node["friends_count"])
+                    except KeyError:
+                        pass
+
+                self.generateStats(timeId, nodes, degrees)
+            else:
+                print "Empty nodes."

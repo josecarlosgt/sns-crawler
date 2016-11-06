@@ -1,4 +1,18 @@
 {
+  "Analysis": {
+    "output": "/Users/josecarlos/research/output/analysis_sns_crawler",
+    "times": ["08_07_2016",
+        "09_07_2016",
+        "11_07_2016",
+        "12_07_2016",
+        "13_07_2016",
+        "14_07_2016",
+        "15_07_2016",
+        "16_07_2016",
+        "17_07_2016",
+        "18_07_2016"],
+      "egoId": "2549223656"
+  },
   "SNS": {
     "egoId": "fsm2016wsf",
     "invalidIds": ["josecarlosgt05","4569200370"],
