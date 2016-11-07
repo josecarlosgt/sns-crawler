@@ -99,7 +99,7 @@ class Triadics:
 
             fo.close()
 
-        timeKey = self.TIMES[0] + "_" + self.times[-1]
+        timeKey = self.TIMES[0] + "_" + self.TIMES[-1]
         output_p = self.CONF + timeKey + "_participation"
         output_d = self.CONF + timeKey + "_indegree"
         fo_p = open(output_p, "w")
